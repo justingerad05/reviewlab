@@ -1176,20 +1176,24 @@ fs.writeFileSync(`_site/author/index.html`,`
 
 <script type="application/ld+json">
 {
- "@context":"https://schema.org",
- "@type":"Person",
- "name":"Justin Gerald",
- "url":"${SITE_URL}/author/",
- "jobTitle":"Product Review Analyst",
- "worksFor":{
-   "@type":"Organization",
-   "name":"ReviewLab"
- },
- "sameAs":[
-   "https://x.com/JustinGera80500",
-   "https://www.plurk.com/justingerad05",
-   "https://github.com/justingerad05"
- ]
+  "@context": "https://schema.org",
+  "@type": "Person",
+  "name": "Justin Gerald",
+  "jobTitle": "AI Software Analyst & Review Specialist",
+  "url":"${SITE_URL}/author/",
+  "sameAs": [
+    "https://www.youtube.com/@HonestProductReviewLab",
+    "https://x.com/justingerad80500",
+    "https://www.plurk.com/justingerad05",
+    "https://github.com/justingerad05"
+  ],
+  "worksFor": {
+    "@type": "Organization",
+    "name": "Review Lab",
+    "url":"${SITE_URL}",
+  },
+  "description": "Independent analyst testing AI software based on feature verification, performance review, and monetization potential."
+}
 }
 </script>
 
