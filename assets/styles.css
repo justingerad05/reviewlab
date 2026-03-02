@@ -233,11 +233,11 @@ h1{
 }
 
 .page-wrapper{
-  position:relative;
+  display:flex;
+  gap:40px;
   max-width:1200px;
   margin:0 auto;
   padding:0 20px;
-  margin-bottom:-50px;
 }
 
 .main-content{
@@ -258,13 +258,9 @@ h1{
 }
 
 .sidebar{
-  position:absolute;
-  left:950px;
-  top:0;
+  position:relative;
   width:240px;
-  opacity:.9;
-  z-index:1;
-  pointer-events: none;
+  margin-left:40px;
 }
 
 .post-page article{
