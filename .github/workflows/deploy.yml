@@ -29,7 +29,14 @@ jobs:
         
       - name: List files
         run: ls -R
-    
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4 with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: _site
+        publish_branch: gh-pages 
+        keep_files: false
+      
       - name: Ping Google
         run: curl https://www.google.com/ping?sitemap=https://justingerad05.github.io/reviewlab-static/sitemap.xml
 
