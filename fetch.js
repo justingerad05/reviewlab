@@ -563,6 +563,7 @@ ${i+1}. <a href="${p.url}">${p.title}</a>
 </head>
 <body>
 ${globalHeader()}
+<div class="container">
 
 <h1>Top 10 ${category.replace(/-/g," ")}</h1>
 <ol class="clean-list">
@@ -576,6 +577,7 @@ ROI, usability, and competitive analysis.
 </p>
 </div>
 
+</div>
 </body>
 </html>
 `;
@@ -1020,13 +1022,14 @@ fs.writeFileSync(`_site/ai-tools/index.html`, `
 </head>
 <body>
 ${globalHeader()}
-
+<div class="container">
 <h1>AI Tools Categories</h1>
 
 <ul>
 ${aiToolsList}
 </ul>
 
+</div>
 </body>
 </html>
 `);
