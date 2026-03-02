@@ -1245,7 +1245,8 @@ All analysis is independently structured and manually evaluated.
 </p>
 </div>
 
-</div>
+... author intro ...
+
 <h2>Latest Reviews</h2>
 <ul class="post-list">
 ${authorPosts}
