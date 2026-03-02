@@ -188,12 +188,16 @@ body {
   color:#e5e7eb;
 }
 
+:root{
+  --site-width: 1140px;
+}
+
 .container{
-  max-width:1280px; /* increased */
-  margin:0 auto;
-  padding:60px 32px 30px 32px;
-  position:relative;
-  z-index:2;
+  max-width: var(--site-width);
+  margin: 0 auto;
+  padding: 60px 24px 40px 24px;
+  position: relative;
+  z-index: 2;
 }
 
 h1{
@@ -230,7 +234,9 @@ h1{
 .post-title{
   color:#7dd3fc;
   font-weight:700;
-  font-size:20px;
+  font-size:18px;
+  line-height:1.4;
+  max-width:600px;
 }
   
 .post-title:hover{text-decoration:underline;}
@@ -286,18 +292,18 @@ h1{
 .post-page{
   background:#ffffff;
   color:#111827;
-  padding:70px 90px; /* wider internal spacing */
+  padding:60px 70px;
   border-radius:24px;
   box-shadow:0 30px 90px rgba(0,0,0,.08);
-  width:100%;
-  max-width:none; /* remove artificial cap */
+  max-width: 760px;
+  margin: 0 auto;
 }
 
 .page-wrapper{
   display:grid;
-  grid-template-columns: minmax(0, 1fr) 300px; /* content + fixed sidebar */
-  gap:60px;
-  width:100%;
+  grid-template-columns: 1fr 260px;
+  gap:50px;
+  align-items:start;
 }
 
 .main-content{
@@ -316,10 +322,9 @@ h1{
 }
 
 .sidebar{
-  width:300px;
+  width:260px;
   position:sticky;
-  top:140px;
-  align-self:start;
+  top:110px;
 }
 
 .sidebar h3{
@@ -531,6 +536,8 @@ article ul{
   display:flex;
   align-items:center;
   gap:16px;
+  max-width: 820px;
+  margin: 0 auto;
   width:100%;
   text-decoration:none;
   color:inherit;
@@ -575,11 +582,12 @@ article ul{
 }
 
 .nav-container{
-max-width:1100px;
-margin:auto;
-display:flex;
-justify-content:space-between;
-align-items:center;
+  max-width: var(--site-width);
+  margin: 0 auto;
+  padding: 0 24px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
 }
 
 .logo{
