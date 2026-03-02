@@ -11,8 +11,7 @@ function escapeJson(str){
 function sanitizeHTML(html){
   return html
     .replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi,"")
-    .replace(/style="[^"]*"/gi,"")
-    .replace(/class="Mso[^"]*"/gi,"");
+    .replace(/on\w+="[^"]*"/gi,""); // remove inline JS only
 }
 
 const FEED_URL =
@@ -76,7 +75,7 @@ if(!Array.isArray(entries)) entries=[entries];
 
 async function getYouTubeImages(html, slug) {
 
-  const match = html.match(/(?:youtube\.com\/embed\/|watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+  const match = html.match(/(?:youtube\.com\/(?:embed\/|watch\?v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
 
   if (!match) {
     return [`${SITE_URL}/assets/og-default.jpg`];
@@ -1190,10 +1189,9 @@ fs.writeFileSync(`_site/author/index.html`,`
   "worksFor": {
     "@type": "Organization",
     "name": "Review Lab",
-    "url":"${SITE_URL}",
+    "url":"${SITE_URL}"
   },
-  "description": "Independent analyst testing AI software based on feature verification, performance review, and monetization potential."
-}
+  "description": "Independent AI software analyst focused on structured testing, monetization evaluation, and workflow performance analysis."
 }
 </script>
 
