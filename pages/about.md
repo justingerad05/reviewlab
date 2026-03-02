@@ -1,5 +1,5 @@
-About Review Lab
-Independent AI Software Testing & Monetization Research
+# About Review Lab
+## Independent AI Software Testing & Monetization Research
 
 Review Lab is a structured AI software analysis platform focused on performance verification, implementation testing, and monetization viability.
 
@@ -17,7 +17,7 @@ Our objective is clarity before commitment.
 
 Software should be tested — not promoted blindly.
 
-Our Core Focus
+## Our Core Focus
 
 Review Lab specializes in AI tools used for:
 
@@ -30,7 +30,7 @@ Review Lab specializes in AI tools used for:
 
 Each review evaluates both technical performance and economic leverage.
 
-Independence Policy
+## Independence Policy
 
 Review Lab is independently operated.
 
@@ -44,7 +44,7 @@ Affiliate relationships (where applicable) never influence:
 
 If a tool underperforms, it is documented.
 
-Why Review Lab Exists
+## Why Review Lab Exists
 
 The AI software market is saturated with promotional content.
 
