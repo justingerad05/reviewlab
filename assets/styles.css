@@ -112,14 +112,14 @@ body.homepage-bg::before{
   gap:18px;
   margin:20px 0 40px 0;
   font-size:14px;
-  color:#94a3b8;
+  color:#e2e8f0;
 }
 
 .trust-bar div{
-  background:rgba(255,255,255,.05);
-  padding:8px 14px;
-  border-radius:10px;
-  border:1px solid rgba(255,255,255,.1);
+  background:rgba(255,255,255,.08);
+  padding:10px 16px;
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,.15);
 }
 
 /* ===== Base Layout ===== */
@@ -224,26 +224,25 @@ h1{
 .post-page{
   background:#ffffff;
   color:#111827;
-  padding:60px 90px;
+  padding:60px 70px;
   border-radius:20px;
   box-shadow:0 25px 70px rgba(0,0,0,.06);
-  width:730px;
-  position:relative;
-  z-index:5;
+  width:100%;
+  max-width:820px;   /* wider, premium look */
 }
 
 .page-wrapper{
-  position:relative;
+  display:flex;
+  gap:40px;
   max-width:1200px;
   margin:0 auto;
   padding:0 20px;
-  margin-bottom:-50px;
+  align-items:flex-start;
 }
 
 .main-content{
-  flex:4;
-  display:flex;
-  justify-content:flex-end;
+  flex: 1;
+  display:block;
 }
 
 /* Allow sidebar links themselves to still work */
@@ -258,13 +257,24 @@ h1{
 }
 
 .sidebar{
-  position:absolute;
-  left:950px;
-  top:0;
-  width:240px;
-  opacity:.9;
-  z-index:1;
-  pointer-events: none;
+  width:260px;
+  position:sticky;
+  top:120px;
+  opacity:1;
+  pointer-events:auto;
+}
+
+.sidebar h3{
+  margin-top:0;
+}
+
+.sidebar ul{
+  list-style:none;
+  padding-left:0;
+}
+
+.sidebar li{
+  margin-bottom:12px;
 }
 
 .post-page article{
