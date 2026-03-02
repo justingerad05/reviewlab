@@ -99,6 +99,29 @@ body.homepage-bg::before{
   z-index: -1; /* ADD THIS */
 }
 
+.hero-authority{
+  font-size:22px;
+  font-weight:600;
+  color:#cbd5e1;
+  margin-bottom:14px;
+}
+
+.trust-bar{
+  display:flex;
+  flex-wrap:wrap;
+  gap:18px;
+  margin:20px 0 40px 0;
+  font-size:14px;
+  color:#94a3b8;
+}
+
+.trust-bar div{
+  background:rgba(255,255,255,.05);
+  padding:8px 14px;
+  border-radius:10px;
+  border:1px solid rgba(255,255,255,.1);
+}
+
 /* ===== Base Layout ===== */
 
 body {
