@@ -1,4 +1,4 @@
-"/* ===== Basic Background Test ===== */
+/* ===== Basic Background Test ===== */
 
 body.homepage-bg{
   background-image:url("/reviewlab-static/assets/hero-bg.jpg");
@@ -578,4 +578,4 @@ color:#6b7280;
   0%{ transform:translateY(0px); }
   50%{ transform:translateY(-15px); }
   100%{ transform:translateY(0px); }
-}"
+}
