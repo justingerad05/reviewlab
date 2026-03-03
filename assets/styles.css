@@ -312,7 +312,7 @@ h1{
 
 .page-wrapper{
   display:grid;
-  grid-template-columns: 560px 260px;
+  grid-template-columns: 560px 60px;
   gap:60px;
   justify-content:center;
 }
