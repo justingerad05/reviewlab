@@ -353,7 +353,7 @@ h1{
   top:110px;
   align-self:start;
   padding-left:10px;
-  gap:140px;
+  gap:-60px;
 }
 
 .sidebar h3{
