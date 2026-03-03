@@ -1077,7 +1077,13 @@ ${topics[topic]
 .slice(0,6)
 .map(p=>`
 <div class="hub-card">
-<h3><a href="${p.url}">${p.title}</a></h3>
+
+<h3>
+  <a href="${p.url}">
+    ${escapeJson(p.title)}
+  </a>
+</h3>
+
 <p>${p.description}</p>
 </div>
 `).join("")}
