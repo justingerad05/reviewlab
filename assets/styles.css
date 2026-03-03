@@ -312,7 +312,7 @@ h1{
 
 .page-wrapper{
   display:grid;
-  grid-template-columns: 760px 20px;
+  grid-template-columns: 760px 40px;
   gap:60px;
   justify-content:center;
 }
@@ -336,7 +336,7 @@ h1{
   width:240px;
   position:sticky;
   top:110px;
-  padding:0 190px;
+  padding:0 170px;
   align-self:start;
 }
 
