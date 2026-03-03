@@ -333,7 +333,7 @@ h1{
 }
 
 .sidebar{
-  width:260px;
+  width:160px;
   position:sticky;
   top:110px;
   align-self:start;
@@ -625,7 +625,7 @@ color:white;
   border-top:1px solid #e5e7eb;
   text-align:center;
   font-size:14px;
-  max-width: var(--site-width);
+  max-width: 820px;
   margin-left:auto;
   margin-right:auto;
 }
