@@ -333,9 +333,10 @@ h1{
 }
 
 .sidebar{
-  width:560px;
+  width:240px;
   position:sticky;
   top:110px;
+  left:950px;
   align-self:start;
 }
 
