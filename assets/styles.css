@@ -336,7 +336,7 @@ h1{
   width:240px;
   position:sticky;
   top:110px;
-  right: -50px;
+  padding:0 60px;
   align-self:start;
 }
 
