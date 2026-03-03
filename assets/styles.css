@@ -311,7 +311,7 @@ h1{
 
 .page-wrapper{
   display:grid;
-  grid-template-columns: 700px 80px;
+  grid-template-columns: 760px 260px;
   gap:60px;
   justify-content:center;
 }
@@ -332,15 +332,33 @@ h1{
 }
 
 .sidebar{
-  width:260px;
+  width:100%;
+  max-width:260px;
   position:sticky;
   top:110px;
   align-self:start;
-  padding:0;
+  padding-left:10px;
 }
 
 .sidebar h3{
+  font-size:16px;
+  margin-bottom:14px;
+  color:#94a3b8;
+  font-weight:600;
   margin-top:0;
+}
+
+.sidebar ul li{
+  margin-bottom:8px;
+}
+
+.sidebar a{
+  color:#64748b;
+  font-size:14px;
+}
+
+.sidebar a:hover{
+  color:#38bdf8;
 }
 
 .sidebar ul{
