@@ -159,6 +159,8 @@ body.homepage-bg::before{
   grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
   gap:30px;
   margin-bottom:50px;
+  position: relative;
+  z-index: 10;
 }
 
 .hub-card{
@@ -168,7 +170,7 @@ body.homepage-bg::before{
   border:1px solid rgba(255,255,255,.12);
   transition:.3s;
   position: relative;
-  z-index: 5;
+  z-index: 11;
 }
 
 .hub-card:hover{
@@ -178,7 +180,7 @@ body.homepage-bg::before{
 
 .hub-card a{
   position: relative;
-  z-index: 6;
+  z-index: 12;
 }
 
 .internal-widget{
@@ -324,13 +326,13 @@ h1{
 
 .page-wrapper{
   display:grid;
-  grid-template-columns: 760px 260px;
-  gap:60px;
-  justify-content:center;
+  grid-template-columns: minmax(0, 1fr) 260px;
+  gap:50px;
+  align-items:start;
 }
 
 .main-content{
-  width:100%;
+  min-width:0;
 }
 
 /* Allow sidebar links themselves to still work */
@@ -351,6 +353,7 @@ h1{
   top:110px;
   align-self:start;
   padding-left:10px;
+  gap:40px;
 }
 
 .sidebar h3{
