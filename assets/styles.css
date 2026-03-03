@@ -110,7 +110,7 @@ body.homepage-bg::before{
 
 .home-hero{
   max-width: 920px;
-  margin: 0 auto 60px auto;
+  margin: 60px auto 0 auto;
 }
 
 .home-hero h1{
@@ -207,7 +207,8 @@ body {
 }
 
 h1{
-  font-size:42px;
+  font-weight:700;
+  font-size:40px;
   margin-bottom:14px;
   text-shadow:0 10px 35px rgba(0,0,0,.6);
 }
