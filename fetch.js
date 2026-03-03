@@ -1167,9 +1167,14 @@ ${list}
 /* FULL AUTHORITY AUTHOR PAGE RESTORED */
 
 const authorPosts = posts.map(p=>`
-<li class="author-post">
-  <a href="${p.url}" class="author-post-title">${p.title}</a>
-  <div class="meta">${p.readTime} min read</div>
+<li class="post-card">
+  <a href="${p.url}" class="post-link">
+    <img src="${p.thumb}" class="thumb" alt="${p.title}">
+    <div>
+      <div class="post-title">${p.title}</div>
+      <div class="meta">${p.readTime} min read</div>
+    </div>
+  </a>
 </li>
 `).join("");
 
@@ -1247,8 +1252,6 @@ ReviewLab does not publish anonymous reviews or automated ratings.
 All analysis is independently structured and manually evaluated.
 </p>
 </div>
-
-... author intro ...
 
 <h2>Latest Reviews</h2>
 <ul class="post-list">
