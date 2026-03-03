@@ -99,33 +99,31 @@ body.homepage-bg::before{
   z-index: -1; /* ADD THIS */
 }
 
-.hero-authority{
-  max-width: 720px;
-  font-size:24px;
-  font-weight:600;
-  color:#e2e8f0;
-  margin:22px 0 18px 0;
-  letter-spacing:.3px;
-}
-
 .home-hero{
-  max-width: 920px;
-  margin: 0 auto 60px auto;
+  margin-bottom: 60px;
 }
 
 .home-hero h1{
   font-weight:800;
-  font-size:48px;
-  line-height:1.15;
-  max-width: 820px;
+  font-size:52px;
+  line-height:1.1;
   letter-spacing:-0.5px;
+  max-width: 980px;
+}
+
+.hero-authority{
+  font-size:26px;
+  font-weight:600;
+  color:#e2e8f0;
+  margin:22px 0 18px 0;
+  max-width: 900px;
 }
 
 .home-hero .sub{
-  font-size:18px;
-  max-width: 680px;
-  line-height:1.6;
+  font-size:19px;
+  line-height:1.7;
   color:#cbd5e1;
+  max-width: 880px;
 }
 
 .trust-bar{
@@ -334,11 +332,11 @@ h1{
 }
 
 .sidebar{
-  width:140px;
+  width:260px;
   position:sticky;
   top:110px;
-  padding:0 100px;
   align-self:start;
+  padding:0;
 }
 
 .sidebar h3{
