@@ -620,7 +620,7 @@ article ul{
 .site-header{
   position:sticky;
   top:0;
-  z-index:100;
+  z-index:9999; /* increase priority */
   background:rgba(15,23,42,.38);
   backdrop-filter:blur(16px);
   border-bottom:1px solid rgba(255,255,255,.12);
@@ -644,6 +644,8 @@ text-decoration:none;
 
 .main-nav a{
 color:#cbd5e1;
+position: relative;
+z-index: 10000;
 margin-left:20px;
 text-decoration:none;
 }
