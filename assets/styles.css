@@ -760,6 +760,7 @@ color:#6b7280;
 .email-capture input{
   width:100%;
   min-width:0;
+  box-sizing:border-box;
 }
 
 .form-row{
