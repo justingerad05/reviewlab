@@ -215,6 +215,15 @@ body.homepage-bg::before{
 }
 
 /* ===== Base Layout ===== */
+body * {
+  pointer-events: auto;
+}
+
+.post-card::after,
+.email-capture::after {
+  pointer-events: none !important;
+  z-index: 0;
+}
 
 body {
   margin:0;
