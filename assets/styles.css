@@ -219,6 +219,11 @@ body * {
   pointer-events: auto;
 }
 
+body > *:not(.site-header){
+  position: relative;
+  z-index: 1;
+}
+
 .post-card::after,
 .email-capture::after {
   pointer-events: none !important;
@@ -377,7 +382,7 @@ h1{
   position:sticky;
   top:110px;
   align-self:start;
-  padding-left:120px;
+  padding-left:0;
 }
 
 .sidebar h3{
@@ -825,5 +830,27 @@ color:#6b7280;
   display:block;
   width:100%
 }
-  
+
+/* ===== HARD NAV FIX ===== */
+
+.site-header{
+  position: sticky;
+  top: 0;
+  z-index: 999999 !important;
+}
+
+.nav-container,
+.main-nav,
+.main-nav a{
+  position: relative;
+  z-index: 999999 !important;
+  pointer-events: auto !important;
+}
+
+/* Kill any overlay interference */
+.home-hero::after,
+body::before{
+  pointer-events: none !important;
+}
+
 }
