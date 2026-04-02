@@ -226,7 +226,7 @@ body.homepage-bg::before{
 .cta-btn{
   display:inline-block;
   margin-top:10px;
-  padding:10px 18px;
+  padding:10px 10px;
   background:#22c55e;
   color:#021617;
   font-weight:700;
@@ -405,7 +405,6 @@ h1{
 
 .main-content{
   min-width:0;
-  padding-right:10px;
 }
 
 /* Allow sidebar links themselves to still work */
@@ -427,7 +426,7 @@ h1{
   align-self:start;
 
   margin-left:0;
-  padding-left:0;
+  padding-left:50px;
 
   z-index: 5; /* below header */
 }
