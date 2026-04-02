@@ -371,17 +371,21 @@ h1{
   border-radius:24px;
   box-shadow:0 30px 90px rgba(0,0,0,.08);
   width:100%;
+  margin-right:20px;
 }
 
 .page-wrapper{
   display:grid;
-  grid-template-columns: minmax(0, 1fr) 260px;
-  gap:50px;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap:40px;
   align-items:start;
+  position: relative;
+  z-index: 1;
 }
 
 .main-content{
   min-width:0;
+  padding-right:10px;
 }
 
 /* Allow sidebar links themselves to still work */
@@ -397,11 +401,15 @@ h1{
 
 .sidebar{
   width:100%;
-  max-width:260px;
-  position:sticky;
-  top:110px;
+  max-width:280px;
+  position: sticky;
+  top:100px;
   align-self:start;
+
+  margin-left:0;
   padding-left:0;
+
+  z-index: 5; /* below header */
 }
 
 .sidebar h3{
@@ -851,13 +859,7 @@ color:#6b7280;
 }
 
 /* ===== HARD NAV FIX ===== */
-
-.site-header{
-  position: sticky;
-  top: 0;
-  z-index: 999999 !important;
-}
-
+  
 .nav-container,
 .main-nav,
 .main-nav a{
@@ -872,4 +874,24 @@ body::before{
   pointer-events: none !important;
 }
 
+  /* ===== FINAL CLICK FIX ===== */
+
+.site-header{
+  position: sticky;
+  top:0;
+  z-index:1000000;
+}
+
+.site-header *{
+  pointer-events:auto !important;
+}
+
+/* Prevent layout overlap into header */
+.page-wrapper,
+.container,
+.post-page{
+  position: relative;
+  z-index: 1;
+}
+  
 }
