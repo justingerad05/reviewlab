@@ -233,6 +233,26 @@ body.homepage-bg::before{
   border-radius:8px;
 }
 
+.money-cta{
+  margin:40px 0;
+  padding:30px;
+  background:linear-gradient(135deg,#22c55e,#16a34a);
+  color:#021617;
+  border-radius:18px;
+  text-align:center;
+  box-shadow:0 20px 60px rgba(0,0,0,.25);
+}
+
+.money-cta h2{
+  margin-top:0;
+  font-size:26px;
+}
+
+.money-cta p{
+  margin:10px 0 16px;
+  font-weight:500;
+}
+
 /* ===== Base Layout ===== */
 body * {
   pointer-events: auto;
