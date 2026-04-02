@@ -198,6 +198,22 @@ body.homepage-bg::before{
   margin-bottom:10px;
 }
 
+.site-header,
+.nav-container,
+.main-nav,
+.main-nav a {
+  position: relative;
+  z-index: 99999;
+}
+
+.post-card,
+.email-capture,
+.container,
+.home-hero {
+  z-index: 1;
+  position: relative;
+}
+
 /* ===== Base Layout ===== */
 
 body {
