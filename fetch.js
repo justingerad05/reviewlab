@@ -1026,22 +1026,64 @@ fs.writeFileSync(`_site/ai-tools/index.html`, `
 <html>
 <head>
 <meta charset="utf-8">
-<link rel="preconnect" href="https://img.youtube.com">
-<link rel="preconnect" href="https://i.ytimg.com">
-<link rel="dns-prefetch" href="//img.youtube.com">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>AI Tools Categories</title>
+
+<title>Best AI Tools (Tested & Ranked)</title>
+<meta name="description" content="Discover the best AI tools ranked by real testing, ROI, and performance.">
+
 <link rel="canonical" href="${SITE_URL}/ai-tools/">
 <link rel="stylesheet" href="${SITE_URL}/assets/styles.css">
+
 </head>
+
 <body>
 ${globalHeader()}
-<div class="container">
-<h1>AI Tools Categories</h1>
 
-<ul>
-${aiToolsList}
-</ul>
+<div class="container">
+
+<h1>Best AI Tools (Tested & Ranked)</h1>
+
+<p class="category-intro">
+We test AI tools based on real-world performance, monetization potential, and workflow efficiency — not hype.
+</p>
+
+<!-- 🔥 TOP CTA -->
+<section class="money-cta">
+<h2>#1 Recommended AI Tool</h2>
+<p>Currently the highest-performing tool based on ROI and usability.</p>
+<a href="${SITE_URL}/ai-tools/ai-writing-tools/" class="cta-btn">
+See #1 Tool →
+</a>
+</section>
+
+<!-- 🔥 CATEGORY GRID -->
+<section class="hub-grid">
+${Object.keys(topics).map(cat => `
+<div class="hub-card">
+
+<h3>
+<a href="${SITE_URL}/ai-tools/${cat}/">
+${formatCategoryTitle(cat)}
+</a>
+</h3>
+
+<p>Explore top-performing tools in this category.</p>
+
+<a href="${SITE_URL}/ai-tools/${cat}/" class="cta-btn">
+View Tools →
+</a>
+
+</div>
+`).join("")}
+</section>
+
+<!-- 🔥 TRUST BLOCK -->
+<div class="author-box">
+<p>
+All tools are tested based on structured methodology, real use cases, and monetization viability.
+No paid placements. No inflated rankings.
+</p>
+</div>
 
 </div>
 </body>
@@ -1355,10 +1397,10 @@ const homepage = `<!doctype html>
 <title>ReviewLab – Honest AI Tool Reviews</title>
 <meta name="description" content="ReviewLab publishes deeply tested AI software reviews.">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="google-site-verification" content="wxs10fPDDR1ULxnxGIWKouLfjkiJrD8RUMORzDPnLwk" />
+<meta name="robots" content="index, follow">
 <link rel="canonical" href="${SITE_URL}/">
 <link rel="stylesheet" href="${SITE_URL}/assets/styles.css">
-
-<meta name="robots" content="index, follow">
 
 <script type="application/ld+json">
 [
