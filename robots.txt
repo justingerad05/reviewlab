@@ -3,4 +3,4 @@ User-agent: *
 Allow: /
 Disallow: /page/
 
-Sitemap: https://justingerad05.github.io/reviewlab-static/sitemap.xml
+Sitemap: https://reviewlab-static.pages.dev//sitemap.xml
