@@ -798,6 +798,10 @@ color:#6b7280;
   font-size: 16px;
 }
 
+  html, body{
+  overflow-x: hidden;
+}
+  
   .sidebar{
     position: relative;
     top: 0;
@@ -823,9 +827,10 @@ color:#6b7280;
   flex-direction:column;
 }
 
-  img, iframe, video {
-  max-width: 100%;
-  height: auto;
+  img, iframe, video{
+  max-width:100%;
+  height:auto;
+  display:block;
 }
 
 .post-title{
@@ -880,7 +885,8 @@ color:#6b7280;
 }
 
 .container{
-  padding: 40px 14px 30px 14px;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 .post-page{
@@ -890,6 +896,25 @@ color:#6b7280;
   .post-link{
   display:block;
   width:100%
+}
+
+  .cta-btn{
+  display:inline-block;
+  width:auto;
+  max-width:100%;
+  text-align:center;
+}
+
+  .related-link{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  padding:12px 0;
+  flex-wrap: nowrap;
+}
+
+  .related-title{
+  white-space: normal;
 }
 
 /* ===== HARD NAV FIX ===== */
