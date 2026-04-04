@@ -999,9 +999,5 @@ body::before{
     position: sticky;
     top: 100px;
   }
-
-  /* Optional: push whole content slightly right */
-  .page-wrapper{
-    transform: translateX(20px);
-  }
+  
 }
