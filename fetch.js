@@ -878,12 +878,39 @@ ${related}
 </div>
 
 <aside class="sidebar">
-<h3>Categories</h3>
-<ul>
-<li><a href="${SITE_URL}/ai-tools/ai-writing-tools/">AI Writing</a></li>
-<li><a href="${SITE_URL}/ai-tools/ai-image-generators/">AI Image</a></li>
-<li><a href="${SITE_URL}/ai-tools/automation-tools/">Automation</a></li>
-</ul>
+
+<!-- 🔥 MONEY CTA -->
+<div class="sidebar-card highlight">
+  <h3>🔥 #1 AI Tool Right Now</h3>
+  <p>Tested for real ROI and performance.</p>
+  <a href="/ai-tools/" class="sidebar-btn">See Top Tool →</a>
+</div>
+
+<!-- 📧 EMAIL CAPTURE -->
+<div class="sidebar-card">
+  <h3>Get Winning AI Tools</h3>
+  <p>Only tools that actually generate income.</p>
+
+  <form action="https://docs.google.com/forms/d/e/1FAIpQLSchzs0bE9se3YCR2TTiFl3Ohi0nbx0XPBjvK_dbANuI_eI1Aw/formResponse" method="POST" target="_blank">
+    <input type="email" name="entry.364499249" placeholder="Your email" required>
+    <button type="submit">Join Free</button>
+  </form>
+
+  <p class="sidebar-trust">
+    Join 1,000+ readers discovering AI tools that actually generate income.
+  </p>
+</div>
+
+<!-- 📂 CATEGORIES -->
+<div class="sidebar-card">
+  <h3>Categories</h3>
+  <ul>
+    <li><a href="/ai-tools/ai-writing-tools/">AI Writing</a></li>
+    <li><a href="/ai-tools/ai-image-generators/">AI Image</a></li>
+    <li><a href="/ai-tools/automation-tools/">Automation</a></li>
+  </ul>
+</div>
+
 </aside>
 
 </div>
