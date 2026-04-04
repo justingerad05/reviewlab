@@ -427,9 +427,107 @@ h1{
 
 .sidebar{
   width:100%;
-  max-width:300px;
+  max-width:260px;
+
   position: sticky;
-  top:100px;
+  top: 120px;
+
+  /* REAL FIX */
+  padding: 20px;
+  background: #f9fafb;
+  border-radius: 16px;
+
+  /* separation from post */
+  box-shadow: 0 10px 30px rgba(0,0,0,.06);
+
+  align-self: start;
+}
+
+.sidebar-card{
+  margin-bottom: 20px;
+  padding: 18px;
+  background: #ffffff;
+  border-radius: 14px;
+  border: 1px solid #e5e7eb;
+}
+
+.sidebar-card h3{
+  margin-top: 0;
+  font-size: 16px;
+  margin-bottom: 10px;
+}
+
+.sidebar-card p{
+  font-size: 14px;
+  color: #6b7280;
+  margin-bottom: 12px;
+}
+
+.sidebar-card ul{
+  list-style: none;
+  padding: 0;
+}
+
+.sidebar-card li{
+  margin-bottom: 10px;
+}
+
+.sidebar-card a{
+  color: #2563eb;
+  font-size: 14px;
+}
+
+.sidebar-card a:hover{
+  text-decoration: underline;
+}
+
+/* CTA highlight */
+.sidebar-card.highlight{
+  background: linear-gradient(135deg,#22c55e,#16a34a);
+  color: #022c22;
+}
+
+.sidebar-card.highlight h3,
+.sidebar-card.highlight p{
+  color: #022c22;
+}
+
+/* Button */
+.sidebar-btn{
+  display: inline-block;
+  background: #111827;
+  color: #fff;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+/* Email form */
+.sidebar-card input{
+  width: 100%;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  margin-bottom: 10px;
+}
+
+.sidebar-card button{
+  width: 100%;
+  padding: 10px;
+  border: none;
+  border-radius: 8px;
+  background: #111827;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Trust text */
+.sidebar-trust{
+  font-size: 13px;
+  color: #9ca3af;
+  margin-top: 8px;
 }
 
 .sidebar h3{
