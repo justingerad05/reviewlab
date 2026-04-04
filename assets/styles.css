@@ -223,14 +223,14 @@ body.homepage-bg::before{
   text-align:center;
 }
 
-.cta-btn{
-  display:inline-block;
-  margin-top:10px;
-  padding:10px 10px;
-  background:#22c55e;
-  color:#021617;
-  font-weight:700;
-  border-radius:8px;
+.cta-btn {
+  background: linear-gradient(135deg, #ff4d4d, #ff9900);
+  color: #fff;
+  padding: 14px 18px;
+  border-radius: 8px;
+  font-weight: bold;
+  text-decoration: none;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.2);
 }
 
 .money-cta{
@@ -402,16 +402,17 @@ h1{
 }
 
 .page-wrapper{
-  display:grid;
+  display:flex;
   grid-template-columns: minmax(0, 1fr) 280px;
   gap:40px;
-  align-items:start;
+  align-items:flex-start;
   position: relative;
   z-index: 1;
 }
 
-.main-content{
-  min-width:0;
+.main-content {
+  flex: 1;
+  min-width: 0;
 }
 
 /* Allow sidebar links themselves to still work */
@@ -425,17 +426,11 @@ h1{
   z-index: 20;
 }
 
-.sidebar{
-  width:100%;
-  max-width:280px;
+.sidebar {
+  width: 300px;
+  flex-shrink: 0;
   position: sticky;
-  top:100px;
-  align-self:start;
-
-  margin-left:0;
-  padding-left:120px; /* FIX */
-
-  z-index: 5;
+  top: 100px;
 }
 
 .sidebar h3{
