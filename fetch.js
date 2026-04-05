@@ -806,6 +806,7 @@ ${breadcrumbSchema}
   <p><strong>🚀 Want the exact AI tool that’s making people money right now?</strong></p>
   <a href="/ai-tools/" class="cta-btn">See #1 Tool →</a>
 </div>
+`)}
 
 <p class="sub">
 By <a href="${SITE_URL}/author/" rel="author">Justin Gerald</a> • ${post.readTime} min read
