@@ -459,6 +459,7 @@ h1{
   background: #ffffff;
   border-radius: 14px;
   border: 1px solid #e5e7eb;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.08); /* stronger depth */
 }
 
 .sidebar-card h3{
