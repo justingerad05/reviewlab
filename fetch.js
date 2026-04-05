@@ -826,6 +826,7 @@ By <a href="${SITE_URL}/author/" rel="author">Justin Gerald</a> • ${post.readT
 </section>
 
 ${post.html.replace(/(<p>.*?<\/p>){2}/, `$&
+`)}
 
 <section class="mid-cta">
   <p><strong>Most AI tools are hype. This one actually converts.</strong></p>
@@ -835,7 +836,6 @@ ${post.html.replace(/(<p>.*?<\/p>){2}/, `$&
     Tested for real ROI — not just features.
   </p>
 </section>
-`)}
 
 ${clusterBlock}
 
