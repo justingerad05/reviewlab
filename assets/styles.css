@@ -297,7 +297,7 @@ body {
 }
 
 :root{
-  --site-width: 1200px;
+  --site-width: 1100px;
 }
 
 .container{
@@ -418,7 +418,7 @@ h1{
   display: grid;
   grid-template-columns: 1fr 280px; /* flexible main */
   gap: 40px;
-  max-width: 1200px;
+  max-width: 1100px;
   margin: 0 auto;
   align-items: start;
 }
