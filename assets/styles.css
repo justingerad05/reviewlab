@@ -561,6 +561,17 @@ h1{
   color:#38bdf8;
 }
 
+.sidebar-card a,
+.sidebar-btn{
+  transition: all .25s ease;
+}
+
+.sidebar-card a:hover,
+.sidebar-btn:hover{
+  transform: translateY(-2px);
+  opacity: .9;
+}
+
 .sidebar ul{
   list-style:none;
   padding-left:0;
