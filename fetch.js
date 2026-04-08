@@ -1020,8 +1020,6 @@ hover.classList.remove("hover-centered");
 
 });
 
-// EXISTING CODE...
-
 window.addEventListener("scroll", function(){
   const cta = document.querySelector(".sticky-main-cta");
 
@@ -1034,6 +1032,7 @@ window.addEventListener("scroll", function(){
       <a href="/ai-tools/" class="sidebar-btn">Claim Access Now</a>
     `;
   }
+});
 });
 
 </script>
