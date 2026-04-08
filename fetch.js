@@ -909,16 +909,17 @@ ${related}
 
 <!-- 4. EMAIL CAPTURE (SECONDARY) -->
 <div class="sidebar-card">
-  <h3>Get Winning AI Tools</h3>
-  <p>Only tools that actually generate income.</p>
+  <h3>🎁 Free AI Tool Kit</h3>
+  <p>Get the exact tools + workflows beginners use to generate income.</p>
 
   <form action="https://docs.google.com/forms/d/e/1FAIpQLSchzs0bE9se3YCR2TTiFl3Ohi0nbx0XPBjvK_dbANuI_eI1Aw/formResponse" method="POST" target="_blank">
-    <input type="email" name="entry.364499249" placeholder="Your email" required>
-    <button type="submit">Join Free</button>
+    <input type="email" name="entry.364499249" placeholder="Enter your email" required>
+    <button type="submit">Get Instant Access</button>
   </form>
 
   <p class="sidebar-trust">
-    Join 1,000+ readers discovering AI tools that actually generate income.
+    ✔ Bonus guide sent instantly after signup<br>
+    ✔ No spam. Only proven tools
   </p>
 </div>
 
