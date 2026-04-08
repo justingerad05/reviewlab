@@ -804,7 +804,7 @@ ${breadcrumbSchema}
 
 <div class="top-cta">
   <p><strong>🚀 Want the exact AI tool that’s making people money right now?</strong></p>
-  <a href="/ai-tools/" class="cta-btn">See #1 Tool →</a>
+  <a href="javascript:void(0)" class="cta-btn">See #1 Tool →</a>
 </div>
 
 <p class="sub">
@@ -830,7 +830,7 @@ ${post.html.replace(/(<p>.*?<\/p>){2}/, `$&
 
 <section class="mid-cta">
   <p><strong>Most AI tools are hype. This one actually converts.</strong></p>
-  <a href="/ai-tools/" class="cta-btn">See The Proven Tool →</a>
+  <a href="javascript:void(0)" class="cta-btn">See The Proven Tool →</a>
 
   <p class="mid-ctaa">
     Tested for real ROI — not just features.
@@ -843,7 +843,7 @@ ${clusterBlock}
   <h3>So… is this tool actually worth it?</h3>
   <p>If you want something that delivers real results, this is the one most people switch to.</p>
 
-  <a href="/ai-tools/" class="cta-btn">View Best Alternative →</a>
+  <a href="javascript:void(0)" class="cta-btn">View Best Alternative →</a>
 </section>
   
 <section class="comparison-block">
@@ -863,7 +863,7 @@ ${post.title} vs ${p.title}
 }).join("")}
 </ul>
 <p><strong>Don’t want to compare everything?</strong></p>
-<a href="/ai-tools/" class="cta-btn">See Best Tool →</a>
+<a href="javascript:void(0)" class="cta-btn">See Best Tool →</a>
 </section>
 
 <section class="internal-widget">
@@ -898,7 +898,7 @@ ${related}
 <div class="sidebar-card highlight sticky-main-cta">
   <h3>🚀 Start Making Money With This</h3>
   <p>Beginner-friendly system. No tech skills needed.</p>
-  <a href="/ai-tools/" class="sidebar-btn">Get Instant Access</a>
+  <a href="javascript:void(0)" class="sidebar-btn">Get Instant Access</a>
 </div>
 
 <!-- 2. SOCIAL PROOF -->
@@ -926,9 +926,9 @@ ${related}
 <div class="sidebar-card">
   <h3>📚 Related Guides</h3>
   <ul>
-    <li><a href="/ai-tools/">Best AI Tools for Beginners</a></li>
+    <li><a href="javascript:void(0)">Best AI Tools for Beginners</a></li>
     <li><a href="/posts/">How I Made My First $100 Online</a></li>
-    <li><a href="/ai-tools/">Top Passive Income Systems</a></li>
+    <li><a href="javascript:void(0)">Top Passive Income Systems</a></li>
   </ul>
 </div>
 
@@ -1037,7 +1037,6 @@ window.addEventListener("scroll", function(){
     if(text) text.textContent = "This tool is getting popular fast. Get in early.";
     if(link){
       link.textContent = "Claim Access Now";
-      link.href = "/ai-tools/"; // IMPORTANT FIX
     }
   }
 
@@ -1050,7 +1049,7 @@ document.addEventListener("mouseout", function(e){
       <div class="exit-popup">
         <h3>Wait — Before You Leave</h3>
         <p>This tool is helping beginners generate income.</p>
-        <a href="/ai-tools/" class="cta-btn">See It Now →</a>
+        <a href="javascript:void(0)" class="cta-btn">See It Now →</a>
       </div>
     `;
     document.body.appendChild(popup);
@@ -1059,12 +1058,43 @@ document.addEventListener("mouseout", function(e){
 
 </script>
 
+</script>
+
+<!-- ✅ ADD THIS SCRIPT HERE -->
+<script>
+document.addEventListener("DOMContentLoaded", function(){
+
+  const text = document.body.innerText.toLowerCase();
+
+  let target = "/ai-tools/";
+
+  if(text.includes("writing") || text.includes("copy") || text.includes("script")){
+    target = "/ai-tools/ai-writing-tools/";
+  }
+
+  if(text.includes("image") || text.includes("design") || text.includes("art")){
+    target = "/ai-tools/ai-image-generators/";
+  }
+
+  if(text.includes("automation") || text.includes("workflow")){
+    target = "/ai-tools/automation-tools/";
+  }
+
+  // Apply to ALL CTA buttons
+  document.querySelectorAll(".cta-btn, .sidebar-btn").forEach(btn=>{
+    btn.href = target;
+  });
+
+});
+</script>
+<!-- ✅ END -->
+
 <div class="sticky-cta">
-<a href="/ai-tools/" class="cta-btn">
+<a href="javascript:void(0)" class="cta-btn">
 🔥 See The Tool Everyone Is Switching To
 </a>
-
 </div>
+
 </body>
 </html>
 `;
