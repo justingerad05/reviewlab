@@ -491,10 +491,29 @@ h1{
   text-decoration: underline;
 }
 
+.sticky-main-cta{
+  position: relative;
+  overflow: hidden;
+}
+
+.sticky-main-cta::after{
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    circle at top right,
+    rgba(255,255,255,.25),
+    transparent 60%
+  );
+  pointer-events: none;
+}
+
 /* CTA highlight */
 .sidebar-card.highlight{
   background: linear-gradient(135deg,#22c55e,#16a34a);
   color: #022c22;
+  transform: scale(1.02);
+  box-shadow: 0 20px 50px rgba(0,0,0,.15);
 }
 
 .sidebar-card.highlight h3,
