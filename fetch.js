@@ -1020,6 +1020,7 @@ hover.classList.remove("hover-centered");
 
 });
 
+document.addEventListener("DOMContentLoaded",()=>{
 window.addEventListener("scroll", function(){
   const cta = document.querySelector(".sticky-main-cta");
 
@@ -1031,6 +1032,21 @@ window.addEventListener("scroll", function(){
       <p>This tool is getting popular fast. Get in early.</p>
       <a href="#" class="sidebar-btn">Claim Access Now</a>
     `;
+  }
+});
+});
+
+document.addEventListener("mouseout", function(e){
+  if(e.clientY < 10){
+    const popup = document.createElement("div");
+    popup.innerHTML = `
+      <div class="exit-popup">
+        <h3>Wait — Before You Leave</h3>
+        <p>This tool is helping beginners generate income.</p>
+        <a href="/ai-tools/" class="cta-btn">See It Now →</a>
+      </div>
+    `;
+    document.body.appendChild(popup);
   }
 });
 
