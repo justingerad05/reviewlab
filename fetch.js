@@ -1060,48 +1060,58 @@ window.addEventListener("load", function(){
     i++;
   });
 
-  /* SCROLL CTA */
+  /* SCROLL CTA FIX */
 
-  var cta = document.querySelector(".sticky-main.cta");
+var cta = document.querySelector(".sticky-main-cta");
 
-  if(cta){
-    window.addEventListener("scroll", function(){
+if(cta){
+  window.addEventListener("scroll", function(){
 
-      if(window.scrollY > 600 && !cta.classList.contains("active")){
+    if(window.scrollY > 600 && !cta.classList.contains("active")){
 
-        cta.classList.add("active");
+      cta.classList.add("active");
 
-        var title = cta.querySelector("h3");
-        var textEl = cta.querySelector("p");
-        var link = cta.querySelector("a");
+      var title = cta.querySelector("h3");
+      var textEl = cta.querySelector("p");
+      var link = cta.querySelector("a");
 
-        if(title) title.textContent = "⚡ Don’t Miss This Opportunity";
-        if(textEl) textEl.textContent = "This tool is getting popular fast. Get in early.";
-        if(link) link.textContent = "Claim Access Now";
-      }
+      if(title) title.textContent = "⚡ Don’t Miss This Opportunity";
+      if(textEl) textEl.textContent = "This tool is getting popular fast. Get in early.";
+      if(link) link.textContent = "Claim Access Now";
+    }
 
-    });
+  });
+}
+
+/* EXIT POPUP (PERSISTENT + SMART) */
+
+(function(){
+
+  const POPUP_KEY = "exitPopupLastShown";
+  const SHOW_DELAY_HOURS = 6; // show again after 6 hours
+
+  function canShowPopup(){
+    const last = localStorage.getItem(POPUP_KEY);
+    if(!last) return true;
+
+    const diff = (Date.now() - parseInt(last)) / (1000 * 60 * 60);
+    return diff > SHOW_DELAY_HOURS;
   }
 
-  /* EXIT POPUP (SAFE STRING) */
+  function markShown(){
+    localStorage.setItem(POPUP_KEY, Date.now().toString());
+  }
 
-  var popupShown = false;
+  function createPopup(primaryLink){
 
-  document.addEventListener("mouseleave", function(e){
-
-    if(e.clientY > 0) return;
-    if(popupShown) return;
-
-    popupShown = true;
-
-    var popup = document.createElement("div");
+    const popup = document.createElement("div");
     popup.className = "exit-popup-overlay";
 
     popup.innerHTML =
       '<div class="exit-popup">' +
         '<h3>Wait — Before You Leave</h3>' +
         '<p>This AI system is helping beginners generate income.</p>' +
-        '<a href="' + primary + '" class="cta-btn">See It Now →</a>' +
+        '<a href="' + primaryLink + '" class="cta-btn">See It Now →</a>' +
         '<span class="close-popup">✕</span>' +
       '</div>';
 
@@ -1109,11 +1119,24 @@ window.addEventListener("load", function(){
 
     popup.querySelector(".close-popup").onclick = function(){
       popup.remove();
+      markShown(); // mark when closed
     };
+
+    markShown(); // mark when shown
+  }
+
+  document.addEventListener("mouseleave", function(e){
+
+    if(e.clientY > 0) return;
+
+    if(!canShowPopup()) return;
+
+    const primary = "/ai-tools/";
+    createPopup(primary);
 
   });
 
-});
+})();
 </script>
 
 <div class="sticky-cta">
