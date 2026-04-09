@@ -1021,58 +1021,14 @@ hover.classList.remove("hover-centered");
 
 });
 
-window.addEventListener("scroll", function(){
-
-  const cta = document.querySelector(".sticky-main-cta");
-  if(!cta) return;
-
-  if(window.scrollY > 600 && !cta.classList.contains("active")){
-
-    cta.classList.add("active");
-
-    const title = cta.querySelector("h3");
-    const text = cta.querySelector("p");
-    const link = cta.querySelector("a");
-
-    if(title) title.textContent = "⚡ Don’t Miss This Opportunity";
-    if(text) text.textContent = "This tool is getting popular fast. Get in early.";
-    if(link){
-      link.textContent = "Claim Access Now";
-    }
-  }
-
-});
-
-document.addEventListener("mouseleave", function(e){
-
-  if(e.clientY > 0) return;
-
-  if(document.querySelector(".exit-popup")) return;
-
-  const popup = document.createElement("div");
-  popup.className = "exit-popup-overlay";
-
-  popup.innerHTML = `
-    <div class="exit-popup">
-      <h3>Wait — Before You Leave</h3>
-      <p>This AI tool is helping beginners generate income.</p>
-      <a href="/ai-tools/" class="cta-btn">See It Now →</a>
-      <span class="close-popup">✕</span>
-    </div>
-  `;
-
-  document.body.appendChild(popup);
-
-  document.querySelector(".close-popup").onclick = ()=>{
-    popup.remove();
-  };
-
-});
-
 </script>
 
 <script>
-document.addEventListener("DOMContentLoaded", function(){
+window.addEventListener("load", function(){
+
+  /* =========================
+     SMART CTA ROUTING
+  ========================= */
 
   const text = document.body.innerText.toLowerCase();
 
@@ -1104,8 +1060,66 @@ document.addEventListener("DOMContentLoaded", function(){
   let i = 0;
 
   document.querySelectorAll(".cta-btn, .sidebar-btn").forEach(btn=>{
-    btn.href = allRoutes[i % allRoutes.length];
+    btn.setAttribute("href", allRoutes[i % allRoutes.length]);
     i++;
+  });
+
+  /* =========================
+     SCROLL CTA ACTIVATION
+  ========================= */
+
+  const cta = document.querySelector(".sticky-main-cta");
+
+  if(cta){
+    window.addEventListener("scroll", function(){
+
+      if(window.scrollY > 600 && !cta.classList.contains("active")){
+
+        cta.classList.add("active");
+
+        const title = cta.querySelector("h3");
+        const text = cta.querySelector("p");
+        const link = cta.querySelector("a");
+
+        if(title) title.textContent = "⚡ Don’t Miss This Opportunity";
+        if(text) text.textContent = "This tool is getting popular fast. Get in early.";
+        if(link) link.textContent = "Claim Access Now";
+      }
+
+    });
+  }
+
+  /* =========================
+     EXIT INTENT POPUP (FIXED)
+  ========================= */
+
+  let popupShown = false;
+
+  document.addEventListener("mouseleave", function(e){
+
+    if(e.clientY > 0) return;
+    if(popupShown) return;
+
+    popupShown = true;
+
+    const popup = document.createElement("div");
+    popup.className = "exit-popup-overlay";
+
+    popup.innerHTML = `
+      <div class="exit-popup">
+        <h3>Wait — Before You Leave</h3>
+        <p>This AI system is helping beginners generate income.</p>
+        <a href="${primary}" class="cta-btn">See It Now →</a>
+        <span class="close-popup">✕</span>
+      </div>
+    `;
+
+    document.body.appendChild(popup);
+
+    popup.querySelector(".close-popup").onclick = ()=>{
+      popup.remove();
+    };
+
   });
 
 });
