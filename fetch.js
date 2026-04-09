@@ -1043,30 +1043,21 @@ window.addEventListener("scroll", function(){
 
 });
 
-let popupShown = false;
-
-document.addEventListener("mouseleave", function(e){
-  if(e.clientY <= 0 && !popupShown){
-
-    popupShown = true;
-
+document.addEventListener("mouseout", function(e){
+  if(e.clientY < 10){
     const popup = document.createElement("div");
-    popup.className = "exit-popup-overlay";
-
-    popup.innerHTML = `
-      <div class="exit-popup">
-        <h3>Wait — Before You Leave</h3>
-        <p>This AI tool is helping beginners generate income fast.</p>
-        <a href="/ai-tools/" class="cta-btn">See It Now →</a>
-      </div>
-    `;
-
+    popup.innerHTML = '<div class="exit-popup">' +
+  '<h3>Wait — Before You Leave</h3>' +
+  '<p>This tool is helping beginners generating income.</p>' +
+  '<a href="javascript:void(0)" class="cta-btn">See It Now →</a>' +
+'</div>';
     document.body.appendChild(popup);
   }
 });
 
 </script>
 
+<!-- ✅ ADD THIS SCRIPT HERE -->
 <script>
 document.addEventListener("DOMContentLoaded", function(){
 
@@ -1074,23 +1065,26 @@ document.addEventListener("DOMContentLoaded", function(){
 
   let target = "/ai-tools/";
 
-  if(text.includes("writing") || text.includes("copy")){
+  if(text.includes("writing") || text.includes("copy") || text.includes("script")){
     target = "/ai-tools/ai-writing-tools/";
-  } 
-  else if(text.includes("image") || text.includes("design")){
+  }
+
+  if(text.includes("image") || text.includes("design") || text.includes("art")){
     target = "/ai-tools/ai-image-generators/";
-  } 
-  else if(text.includes("automation")){
+  }
+
+  if(text.includes("automation") || text.includes("workflow")){
     target = "/ai-tools/automation-tools/";
   }
 
-  // apply to ALL links with CTA behavior
-  document.querySelectorAll("a.cta-btn, a.sidebar-btn").forEach(btn=>{
-    btn.setAttribute("href", target);
+  // Apply to ALL CTA buttons
+  document.querySelectorAll(".cta-btn, .sidebar-btn").forEach(btn=>{
+    btn.href = target;
   });
 
 });
 </script>
+<!-- ✅ END -->
 
 <div class="sticky-cta">
 <a href="javascript:void(0)" class="cta-btn">
