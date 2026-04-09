@@ -278,6 +278,36 @@ body.homepage-bg::before{
   text-align:center;
 }
 
+.exit-popup-overlay{
+  position:fixed;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  background:rgba(0,0,0,0.7);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  z-index:9999;
+}
+
+.exit-popup{
+  background:#fff;
+  padding:30px;
+  border-radius:12px;
+  max-width:400px;
+  text-align:center;
+}
+
+.exit-popup h3{
+  font-size:22px;
+  margin-bottom:10px;
+}
+
+.exit-popup p{
+  margin-bottom:20px;
+}
+
 /* ===== Base Layout ===== */
 body * {
   pointer-events: auto;
