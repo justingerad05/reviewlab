@@ -1074,18 +1074,19 @@ document.addEventListener("DOMContentLoaded", function(){
 
   let target = "/ai-tools/";
 
-  if(text.includes("writing") || text.includes("copy") || text.includes("script")){
+  if(text.includes("writing") || text.includes("copy")){
     target = "/ai-tools/ai-writing-tools/";
   } 
-  else if(text.includes("image") || text.includes("design") || text.includes("art")){
+  else if(text.includes("image") || text.includes("design")){
     target = "/ai-tools/ai-image-generators/";
   } 
-  else if(text.includes("automation") || text.includes("workflow")){
+  else if(text.includes("automation")){
     target = "/ai-tools/automation-tools/";
   }
 
-  document.querySelectorAll(".cta-btn, .sidebar-btn").forEach(btn=>{
-    btn.href = target;
+  // apply to ALL links with CTA behavior
+  document.querySelectorAll("a.cta-btn, a.sidebar-btn").forEach(btn=>{
+    btn.setAttribute("href", target);
   });
 
 });
