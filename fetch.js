@@ -927,9 +927,9 @@ ${related}
 <div class="sidebar-card">
   <h3>📚 Related Guides</h3>
   <ul>
-    <li><a href="javascript:void(0)">Best AI Tools for Beginners</a></li>
+    <li><a href="/ai-tools/">Best AI Tools for Beginners</a></li>
     <li><a href="/posts/">How I Made My First $100 Online</a></li>
-    <li><a href="javascript:void(0)">Top Passive Income Systems</a></li>
+    <li><a href="/ai-tools/automation-tools/">Top Passive Income Systems</a></li>
   </ul>
 </div>
 
@@ -1043,48 +1043,73 @@ window.addEventListener("scroll", function(){
 
 });
 
-document.addEventListener("mouseout", function(e){
-  if(e.clientY < 10){
-    const popup = document.createElement("div");
-    popup.innerHTML = '<div class="exit-popup">' +
-  '<h3>Wait — Before You Leave</h3>' +
-  '<p>This tool is helping beginners generating income.</p>' +
-  '<a href="javascript:void(0)" class="cta-btn">See It Now →</a>' +
-'</div>';
-    document.body.appendChild(popup);
-  }
+document.addEventListener("mouseleave", function(e){
+
+  if(e.clientY > 0) return;
+
+  if(document.querySelector(".exit-popup")) return;
+
+  const popup = document.createElement("div");
+  popup.className = "exit-popup-overlay";
+
+  popup.innerHTML = `
+    <div class="exit-popup">
+      <h3>Wait — Before You Leave</h3>
+      <p>This AI tool is helping beginners generate income.</p>
+      <a href="/ai-tools/" class="cta-btn">See It Now →</a>
+      <span class="close-popup">✕</span>
+    </div>
+  `;
+
+  document.body.appendChild(popup);
+
+  document.querySelector(".close-popup").onclick = ()=>{
+    popup.remove();
+  };
+
 });
 
 </script>
 
-<!-- ✅ ADD THIS SCRIPT HERE -->
 <script>
 document.addEventListener("DOMContentLoaded", function(){
 
   const text = document.body.innerText.toLowerCase();
 
-  let target = "/ai-tools/";
+  const routes = {
+    writing: "/ai-tools/ai-writing-tools/",
+    image: "/ai-tools/ai-image-generators/",
+    automation: "/ai-tools/automation-tools/",
+    general: "/ai-tools/"
+  };
 
-  if(text.includes("writing") || text.includes("copy") || text.includes("script")){
-    target = "/ai-tools/ai-writing-tools/";
-  }
-
-  if(text.includes("image") || text.includes("design") || text.includes("art")){
-    target = "/ai-tools/ai-image-generators/";
-  }
+  let primary = routes.general;
 
   if(text.includes("automation") || text.includes("workflow")){
-    target = "/ai-tools/automation-tools/";
+    primary = routes.automation;
+  } else if(text.includes("image") || text.includes("design")){
+    primary = routes.image;
+  } else if(text.includes("writing") || text.includes("copy")){
+    primary = routes.writing;
   }
 
-  // Apply to ALL CTA buttons
+  const allRoutes = [
+    primary,
+    routes.writing,
+    routes.image,
+    routes.automation,
+    routes.general
+  ];
+
+  let i = 0;
+
   document.querySelectorAll(".cta-btn, .sidebar-btn").forEach(btn=>{
-    btn.href = target;
+    btn.href = allRoutes[i % allRoutes.length];
+    i++;
   });
 
 });
 </script>
-<!-- ✅ END -->
 
 <div class="sticky-cta">
 <a href="javascript:void(0)" class="cta-btn">
