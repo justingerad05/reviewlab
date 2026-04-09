@@ -1043,21 +1043,30 @@ window.addEventListener("scroll", function(){
 
 });
 
-document.addEventListener("mouseout", function(e){
-  if(e.clientY < 10){
+let popupShown = false;
+
+document.addEventListener("mouseleave", function(e){
+  if(e.clientY <= 0 && !popupShown){
+
+    popupShown = true;
+
     const popup = document.createElement("div");
-    popup.innerHTML = '<div class="exit-popup">' +
-  '<h3>Wait — Before You Leave</h3>' +
-  '<p>This tool is helping beginners generating income.</p>' +
-  '<a href="javascript:void(0)" class="cta-btn">See It Now →</a>' +
-'</div>';
+    popup.className = "exit-popup-overlay";
+
+    popup.innerHTML = `
+      <div class="exit-popup">
+        <h3>Wait — Before You Leave</h3>
+        <p>This AI tool is helping beginners generate income fast.</p>
+        <a href="/ai-tools/" class="cta-btn">See It Now →</a>
+      </div>
+    `;
+
     document.body.appendChild(popup);
   }
 });
 
 </script>
 
-<!-- ✅ ADD THIS SCRIPT HERE -->
 <script>
 document.addEventListener("DOMContentLoaded", function(){
 
@@ -1067,24 +1076,20 @@ document.addEventListener("DOMContentLoaded", function(){
 
   if(text.includes("writing") || text.includes("copy") || text.includes("script")){
     target = "/ai-tools/ai-writing-tools/";
-  }
-
-  if(text.includes("image") || text.includes("design") || text.includes("art")){
+  } 
+  else if(text.includes("image") || text.includes("design") || text.includes("art")){
     target = "/ai-tools/ai-image-generators/";
-  }
-
-  if(text.includes("automation") || text.includes("workflow")){
+  } 
+  else if(text.includes("automation") || text.includes("workflow")){
     target = "/ai-tools/automation-tools/";
   }
 
-  // Apply to ALL CTA buttons
   document.querySelectorAll(".cta-btn, .sidebar-btn").forEach(btn=>{
     btn.href = target;
   });
 
 });
 </script>
-<!-- ✅ END -->
 
 <div class="sticky-cta">
 <a href="javascript:void(0)" class="cta-btn">
