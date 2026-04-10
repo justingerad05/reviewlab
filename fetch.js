@@ -1062,7 +1062,7 @@ window.addEventListener("load", function(){
 
   /* SCROLL CTA */
 
-  var cta = document.querySelector(".sticky-main.cta");
+  var cta = document.querySelector(".sticky-main.ct");
 
   if(cta){
     window.addEventListener("scroll", function(){
