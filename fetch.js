@@ -1062,14 +1062,16 @@ window.addEventListener("load", function(){
 
   /* SCROLL CTA FIX */
 
-var cta = document.querySelector(".sticky-main-cta");
+window.addEventListener("load", function () {
+  const cta = document.querySelector(".sticky-main-ct");
 
-if(cta){
-  window.addEventListener("scroll", function(){
+  if (!cta) return;
 
-    if(window.scrollY > 600 && !cta.classList.contains("active")){
-
+  window.addEventListener("scroll", function () {
+    if (window.scrollY > 600) {
       cta.classList.add("active");
+    } else {
+      cta.classList.remove("active");
 
       var title = cta.querySelector("h3");
       var textEl = cta.querySelector("p");
@@ -1085,57 +1087,49 @@ if(cta){
 
 /* EXIT POPUP (PERSISTENT + SMART) */
 
-(function(){
+(function () {
+  const KEY = "reviewlab_exit_popup";
+  const HOURS = 6;
 
-  const POPUP_KEY = "exitPopupLastShown";
-  const SHOW_DELAY_HOURS = 6; // show again after 6 hours
-
-  function canShowPopup(){
-    const last = localStorage.getItem(POPUP_KEY);
-    if(!last) return true;
-
-    const diff = (Date.now() - parseInt(last)) / (1000 * 60 * 60);
-    return diff > SHOW_DELAY_HOURS;
+  function canShow() {
+    const last = localStorage.getItem(KEY);
+    if (!last) return true;
+    return Date.now() - Number(last) > HOURS * 60 * 60 * 1000;
   }
 
-  function markShown(){
-    localStorage.setItem(POPUP_KEY, Date.now().toString());
+  function markShown() {
+    localStorage.setItem(KEY, Date.now());
   }
 
-  function createPopup(primaryLink){
+  function createPopup(primaryLink) {
+    const overlay = document.createElement("div");
+    overlay.className = "exit-popup-overlay";
 
-    const popup = document.createElement("div");
-    popup.className = "exit-popup-overlay";
+    overlay.innerHTML = `
+      <div class="exit-popup">
+        <h3>Wait Before You Leave</h3>
+        <p>This AI system is helping beginners generate income.</p>
+        <a href="${primaryLink}" class="cta-btn">See It Now →</a>
+        <span class="close-popup">✕</span>
+      </div>
+    `;
 
-    popup.innerHTML =
-      '<div class="exit-popup">' +
-        '<h3>Wait — Before You Leave</h3>' +
-        '<p>This AI system is helping beginners generate income.</p>' +
-        '<a href="' + primaryLink + '" class="cta-btn">See It Now →</a>' +
-        '<span class="close-popup">✕</span>' +
-      '</div>';
+    document.body.appendChild(overlay);
 
-    document.body.appendChild(popup);
-
-    popup.querySelector(".close-popup").onclick = function(){
-      popup.remove();
-      markShown(); // mark when closed
+    overlay.querySelector(".close-popup").onclick = () => {
+      overlay.remove();
+      markShown();
     };
 
-    markShown(); // mark when shown
+    markShown();
   }
 
-  document.addEventListener("mouseleave", function(e){
+  document.addEventListener("mouseleave", function (e) {
+    if (e.clientY > 0) return;
+    if (!canShow()) return;
 
-    if(e.clientY > 0) return;
-
-    if(!canShowPopup()) return;
-
-    const primary = "/ai-tools/";
-    createPopup(primary);
-
+    createPopup("/ai-tools/");
   });
-
 })();
 </script>
 
