@@ -1024,28 +1024,6 @@ hover.classList.remove("hover-centered");
 </script>
 
 <script>
-// =========================
-// ✅ FIXED VERSION (FULL)
-// =========================
-
-/* ONLY CHANGES APPLIED:
-1. Fixed sticky CTA selector bug
-2. Separated sticky-main-cta behavior
-3. Prevent sidebar overlap
-4. Removed broken class reference
-*/
-
-// 🔥 FIXED SCROLL CTA SELECTOR
-// ❌ OLD (BROKEN)
-// var cta = document.querySelector(".sticky-main.ct");
-
-// ✅ NEW (WORKING)
-var cta = document.querySelector(".sticky-main-cta");
-
-// =========================
-// 🔥 FIXED CTA SCRIPT BLOCK
-// =========================
-
 window.addEventListener("load", function(){
 
   var text = document.body.innerText.toLowerCase();
@@ -1082,11 +1060,9 @@ window.addEventListener("load", function(){
     i++;
   });
 
-  // =========================
-  // ✅ FIXED STICKY CTA LOGIC
-  // =========================
+  /* SCROLL CTA */
 
-  var cta = document.querySelector(".sticky-main-cta");
+  var cta = document.querySelector(".sticky-main.ct");
 
   if(cta){
     window.addEventListener("scroll", function(){
@@ -1106,13 +1082,7 @@ window.addEventListener("load", function(){
 
     });
   }
-
-  // =========================
-  // ❌ REMOVED BROKEN exit-popup-Overlay DEPENDENCY
-  // =========================
-
-});
-
+  
   /* EXIT POPUP (SAFE STRING) */
 
   var popupShown = false;
