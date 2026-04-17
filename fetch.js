@@ -1065,12 +1065,23 @@ window.addEventListener("load", function(){
   var cta = document.querySelector(".sticky-main.ct");
 
   if(cta){
-    window.addEventListener("scroll", function(){
+    let ctaShown = false;
 
-      if(window.scrollY > 600 && !cta.classList.contains("active")){
+window.addEventListener("scroll", function(){
 
-        cta.classList.add("active");
+  const scrollPercent =
+    (window.scrollY + window.innerHeight) / document.body.scrollHeight;
 
+  if (scrollPercent > 0.6 && !ctaShown) {
+    ctaShown = true;
+
+    const cta = document.getElementById("floating-cta");
+    if (cta) {
+      cta.style.display = "block";
+    }
+  }
+
+});
         var title = cta.querySelector("h3");
         var textEl = cta.querySelector("p");
         var link = cta.querySelector("a");
@@ -1078,21 +1089,26 @@ window.addEventListener("load", function(){
         if(title) title.textContent = "⚡ Don’t Miss This Opportunity";
         if(textEl) textEl.textContent = "This tool is getting popular fast. Get in early.";
         if(link) link.textContent = "Claim Access Now";
-      }
-
-    });
   }
   
   /* EXIT POPUP (SAFE STRING) */
 
-  var popupShown = false;
+  let exitShown = false;
 
-  document.addEventListener("mouseleave", function(e){
+document.addEventListener("mouseleave", function(e){
+  if (e.clientY < 10 && !exitShown) {
 
-    if(e.clientY > 0) return;
-    if(popupShown) return;
+    exitShown = true;
 
-    popupShown = true;
+    document.getElementById("exit-popup").style.display = "block";
+
+    sessionStorage.setItem("exitShown", "1");
+  }
+});
+
+if (sessionStorage.getItem("exitShown")) {
+  exitShown = true;
+}
 
     var popup = document.createElement("div");
     popup.className = "exit-popup-overlay";
@@ -1111,9 +1127,6 @@ window.addEventListener("load", function(){
       popup.remove();
     };
 
-  });
-
-});
 </script>
 
 <div class="sticky-cta">
