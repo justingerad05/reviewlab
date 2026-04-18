@@ -316,17 +316,49 @@ body.homepage-bg::before{
   font-size:18px;
 }
 
+/* SCROLL CTA (Floating Box) */
+
 .stroll-main-cta{
-  position: sticky;
-  top: 20px;
-  overflow: hidden;
-  transition: all 0.3s ease;
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 300px;
+  background: #0f172a;
+  color: #fff;
+  padding: 16px;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+  z-index: 9999;
+
+  transform: translateY(120%);
+  opacity: 0;
+  transition: all 0.4s ease;
 }
 
 .stroll-main-cta.active{
-  transform:scale(1.03);
-  box-shadow:0 10px 25px rgba(0,0,0,0.25);
-  border:2px solid #22c55e;
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.stroll-main-cta h3{
+  font-size: 16px;
+  margin-bottom: 6px;
+}
+
+.stroll-main-cta p{
+  font-size: 14px;
+  margin-bottom: 10px;
+  color: #cbd5f5;
+}
+
+.stroll-main-cta .cta-btn{
+  display: inline-block;
+  background: #22c55e;
+  color: #000;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-weight: bold;
+  text-decoration: none;
 }
 
 .exit-popup-overlay{
