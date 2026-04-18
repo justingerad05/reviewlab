@@ -1056,74 +1056,69 @@ window.addEventListener("load", function(){
   var i = 0;
 
   document.querySelectorAll(".cta-btn, .sidebar-btn").forEach(function(btn){
+    btn.setAttribute("href", allRoutes[i % allRoutes.length]);
+    i++;
+  });
 
-  var route = allRoutes[i % allRoutes.length];
+  /* SCROLL CTA — FIXED */
 
-  // Append tracking parameter
-  var tracked = "/go/ai-tool/" + (i % 3);
-
-  btn.setAttribute("href", tracked);
-
-  i++;
-});
-
-/* SCROLL CTA (FIXED) */
-
-var cta = document.querySelector(".sticky-main-cta");
+var cta = document.querySelector(".stroll-main-cta");
 
 if(cta){
 
   window.addEventListener("scroll", function(){
 
-    if(window.scrollY > 600 && !cta.classList.contains("active")){
+    if(window.scrollY > 600){
 
-      cta.classList.add("active");
+      if(!cta.classList.contains("active")){
+        cta.classList.add("active");
 
-      var title = cta.querySelector("h3");
-      var textEl = cta.querySelector("p");
-      var link = cta.querySelector("a");
+        var title = cta.querySelector("h3");
+        var textEl = cta.querySelector("p");
+        var link = cta.querySelector("a");
 
-      if(title) title.textContent = "⚡ Don’t Miss This Opportunity";
-      if(textEl) textEl.textContent = "This tool is getting popular fast. Get in early.";
-      if(link) link.textContent = "Claim Access Now";
+        if(title) title.textContent = "⚡ Don’t Miss This Opportunity";
+        if(textEl) textEl.textContent = "This tool is getting popular fast. Get in early.";
+        if(link) link.textContent = "Claim Access Now";
+      }
 
+    } else {
+      cta.classList.remove("active"); // optional reset when scrolling up
     }
 
   });
 
 }
   
-  /* EXIT POPUP (FIXED + SMART) */
+  /* EXIT POPUP (SAFE STRING) */
 
-var popupShown = sessionStorage.getItem("exitShown");
+  var popupShown = false;
 
-document.addEventListener("mouseleave", function(e){
+  document.addEventListener("mouseleave", function(e){
 
-  if(e.clientY > 0) return;
+    if(e.clientY > 0) return;
+    if(popupShown) return;
 
-  if(popupShown) return;
+    popupShown = true;
 
-  popupShown = true;
-  sessionStorage.setItem("exitShown", "1");
+    var popup = document.createElement("div");
+    popup.className = "exit-popup-overlay";
 
-  var popup = document.createElement("div");
-  popup.className = "exit-popup-overlay";
+    popup.innerHTML =
+      '<div class="exit-popup">' +
+        '<h3>Wait — Before You Leave</h3>' +
+        '<p>This AI system is helping beginners generate income.</p>' +
+        '<a href="' + primary + '" class="cta-btn">See It Now →</a>' +
+        '<span class="close-popup">✕</span>' +
+      '</div>';
 
-  popup.innerHTML =
-    '<div class="exit-popup">' +
-      '<h3>Wait — Before You Leave</h3>' +
-      '<p>This AI system is helping beginners generate income.</p>' +
-      '<a href="' + primary + '" class="cta-btn">See It Now →</a>' +
-      '<span class="close-popup">✕</span>' +
-    '</div>';
+    document.body.appendChild(popup);
 
-  document.body.appendChild(popup);
+    popup.querySelector(".close-popup").onclick = function(){
+      popup.remove();
+    };
 
-  popup.querySelector(".close-popup").onclick = function(){
-    popup.remove();
-  };
-
-});
+  });
 
 });
 </script>
