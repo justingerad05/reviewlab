@@ -1140,13 +1140,6 @@ if(cta){
   });
 
 })();
-
-// MOBILE BACK BUTTON / SCROLL TRIGGER
-window.addEventListener("scroll", function() {
-  if (window.scrollY > 400 && !popupShown) {
-    showExitPopup();
-  }
-});
 </script>
 
 <div class="sticky-cta">
