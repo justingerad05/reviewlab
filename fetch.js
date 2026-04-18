@@ -895,7 +895,7 @@ ${related}
 <aside class="sidebar">
 
 <!-- 1. PRIMARY MONEY CTA (Sticky + Dynamic) -->
-<div class="sidebar-card highlight sticky-main-ct">
+<div class="sidebar-card highlight sticky-main-cta">
   <h3>🚀 Start Making Money With This</h3>
   <p>Beginner-friendly system. No tech skills needed.</p>
   <a href="javascript:void(0)" class="sidebar-btn">Get Instant Access</a>
@@ -1056,62 +1056,74 @@ window.addEventListener("load", function(){
   var i = 0;
 
   document.querySelectorAll(".cta-btn, .sidebar-btn").forEach(function(btn){
-    btn.setAttribute("href", allRoutes[i % allRoutes.length]);
-    i++;
+
+  var route = allRoutes[i % allRoutes.length];
+
+  // Append tracking parameter
+  var tracked = "/go/ai-tool/" + (i % 3);
+
+  btn.setAttribute("href", tracked);
+
+  i++;
+});
+
+/* SCROLL CTA (FIXED) */
+
+var cta = document.querySelector(".sticky-main-cta");
+
+if(cta){
+
+  window.addEventListener("scroll", function(){
+
+    if(window.scrollY > 600 && !cta.classList.contains("active")){
+
+      cta.classList.add("active");
+
+      var title = cta.querySelector("h3");
+      var textEl = cta.querySelector("p");
+      var link = cta.querySelector("a");
+
+      if(title) title.textContent = "⚡ Don’t Miss This Opportunity";
+      if(textEl) textEl.textContent = "This tool is getting popular fast. Get in early.";
+      if(link) link.textContent = "Claim Access Now";
+
+    }
+
   });
 
-  /* SCROLL CTA */
-
-  var cta = document.querySelector(".sticky-main.ct");
-
-  if(cta){
-    window.addEventListener("scroll", function(){
-
-      if(window.scrollY > 600 && !cta.classList.contains("active")){
-
-        cta.classList.add("active");
-
-        var title = cta.querySelector("h3");
-        var textEl = cta.querySelector("p");
-        var link = cta.querySelector("a");
-
-        if(title) title.textContent = "⚡ Don’t Miss This Opportunity";
-        if(textEl) textEl.textContent = "This tool is getting popular fast. Get in early.";
-        if(link) link.textContent = "Claim Access Now";
-      }
-
-    });
-  }
+}
   
-  /* EXIT POPUP (SAFE STRING) */
+  /* EXIT POPUP (FIXED + SMART) */
 
-  var popupShown = false;
+var popupShown = sessionStorage.getItem("exitShown");
 
-  document.addEventListener("mouseleave", function(e){
+document.addEventListener("mouseleave", function(e){
 
-    if(e.clientY > 0) return;
-    if(popupShown) return;
+  if(e.clientY > 0) return;
 
-    popupShown = true;
+  if(popupShown) return;
 
-    var popup = document.createElement("div");
-    popup.className = "exit-popup-overlay";
+  popupShown = true;
+  sessionStorage.setItem("exitShown", "1");
 
-    popup.innerHTML =
-      '<div class="exit-popup">' +
-        '<h3>Wait — Before You Leave</h3>' +
-        '<p>This AI system is helping beginners generate income.</p>' +
-        '<a href="' + primary + '" class="cta-btn">See It Now →</a>' +
-        '<span class="close-popup">✕</span>' +
-      '</div>';
+  var popup = document.createElement("div");
+  popup.className = "exit-popup-overlay";
 
-    document.body.appendChild(popup);
+  popup.innerHTML =
+    '<div class="exit-popup">' +
+      '<h3>Wait — Before You Leave</h3>' +
+      '<p>This AI system is helping beginners generate income.</p>' +
+      '<a href="' + primary + '" class="cta-btn">See It Now →</a>' +
+      '<span class="close-popup">✕</span>' +
+    '</div>';
 
-    popup.querySelector(".close-popup").onclick = function(){
-      popup.remove();
-    };
+  document.body.appendChild(popup);
 
-  });
+  popup.querySelector(".close-popup").onclick = function(){
+    popup.remove();
+  };
+
+});
 
 });
 </script>
