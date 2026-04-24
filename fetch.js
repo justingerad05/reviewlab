@@ -833,12 +833,9 @@ By <a href="${SITE_URL}/author/" rel="author">Justin Gerald</a> • ${post.readT
 <section class="post-inline-email">
 <p><strong>Want deeper AI tool breakdowns?</strong></p>
 
-<form action="https://docs.google.com/forms/d/e/1FAIpQLSchzs0bE9se3YCR2TTiFl3Ohi0nbx0XPBjvK_dbANuI_eI1Aw/formResponse" method="POST" target="_blank" class="inline-form">
-
-<input type="email" name="entry.364499249" placeholder="Your email" required>
-
+<form class="email-form" data-source="post">
+<input type="email" placeholder="Your email" required>
 <button type="submit">Send Me Future Reviews</button>
-
 </form>
 
 <p class="trust">No spam. Only tested tools.</p>
@@ -931,10 +928,10 @@ ${related}
   <h3>🎁 Free AI Tool Kit</h3>
   <p>Get the exact tools + workflows beginners use to generate income.</p>
 
-  <form action="https://docs.google.com/forms/d/e/1FAIpQLSchzs0bE9se3YCR2TTiFl3Ohi0nbx0XPBjvK_dbANuI_eI1Aw/formResponse" method="POST" target="_blank">
-    <input type="email" name="entry.364499249" placeholder="Enter your email" required>
-    <button type="submit">Get Instant Access</button>
-  </form>
+  <form class="email-form" data-source="sidebar">
+<input type="email" placeholder="Enter your email" required>
+<button type="submit">Get Instant Access</button>
+</form>
 
   <p class="sidebar-trust">
 ✔ Bonus guide sent instantly after signup<br>
@@ -1143,6 +1140,56 @@ if(scrollPercent > 35){
   });
 
 });
+</script>
+
+<script>
+document.addEventListener("DOMContentLoaded", function(){
+
+  document.querySelectorAll(".email-form").forEach(form => {
+
+    form.addEventListener("submit", async function(e){
+      e.preventDefault();
+
+      const input = form.querySelector("input[type=email]");
+      const email = input.value;
+      const source = form.dataset.source;
+
+      const res = await fetch("/api/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, source })
+      });
+
+      showPopup(source);
+
+      input.value = "";
+    });
+
+  });
+
+});
+
+function showPopup(source){
+
+  const popup = document.createElement("div");
+  popup.className = "email-popup";
+
+  let message = "You're in!";
+
+  if(source === "sidebar"){
+    message = "🎁 Bonus sent! Check your inbox.";
+  }
+
+  popup.innerHTML = `
+    <div class="popup-box">
+      <h3>${message}</h3>
+      <p>More tools coming your way.</p>
+      <button onclick="this.parentElement.parentElement.remove()">Close</button>
+    </div>
+  `;
+
+  document.body.appendChild(popup);
+}
 </script>
 
 <div class="stroll-main-cta">
@@ -1672,13 +1719,13 @@ No spam. No affiliate-first bias.</p>
 Join 1,000+ readers discovering AI tools that actually generate income.
 </p>
 
-<form action="https://docs.google.com/forms/d/e/1FAIpQLSchzs0bE9se3YCR2TTiFl3Ohi0nbx0XPBjvK_dbANuI_eI1Aw/formResponse" method="POST" target="_blank">
+<form class="email-form" data-source="homepage">
 <div class="form-row">
-<input type="email" name="entry.364499249" placeholder="Enter your email address" required>
+<input type="email" placeholder="Enter your email address" required>
 <button type="submit">Get Free Reviews</button>
 </div>
-<div class="trust">Join smart readers staying ahead of AI.</div>
 </form>
+
 </section>
 
 <ul class="post-list">
