@@ -11,10 +11,15 @@ document.addEventListener("DOMContentLoaded", function(){
 
       try {
         const res = await fetch("https://email-api.justingerad05.workers.dev/", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, source })
-        });
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json"
+  },
+  body: JSON.stringify({
+    email: emailValue,
+    source: sourceValue
+  })
+});
 
         if(!res.ok){
           throw new Error("API failed");
