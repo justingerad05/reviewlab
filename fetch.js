@@ -1,5 +1,4 @@
 import fs from "fs";
-import fetch from "node-fetch";
 import { marked } from "marked";
 import { XMLParser } from "fast-xml-parser";
 import { upscaleToOG } from "./generate-og.js";
@@ -65,7 +64,18 @@ fs.mkdirSync(`_site/comparisons`, {recursive:true});
 /* FETCH */
 
 const parser = new XMLParser({ignoreAttributes:false});
-const xml = await (await fetch(FEED_URL)).text();
+
+let xml = "";
+
+try {
+  const res = await fetch(FEED_URL);
+  if(!res.ok) throw new Error("Feed fetch failed");
+  xml = await res.text();
+} catch(err){
+  console.error("Feed error:", err);
+  process.exit(1);
+}
+
 const data = parser.parse(xml);
 
 let entries = data.feed.entry || [];
@@ -1148,22 +1158,34 @@ document.addEventListener("DOMContentLoaded", function(){
   document.querySelectorAll(".email-form").forEach(form => {
 
     form.addEventListener("submit", async function(e){
-      e.preventDefault();
+  e.preventDefault();
 
-      const input = form.querySelector("input[type=email]");
-      const email = input.value;
-      const source = form.dataset.source;
+  const input = form.querySelector("input[type=email]");
+  const email = input.value;
+  const source = form.dataset.source;
 
-      const res = await fetch("https://email-api.justingerad05.workers.dev/", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, source })
-      });
+  try {
 
-      showPopup(source);
-
-      input.value = "";
+    const res = await fetch("https://email-api.justingerad05.workers.dev/", {
+      method: "POST",
+      headers: { 
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ email, source })
     });
+
+    if(!res.ok){
+      throw new Error("API failed");
+    }
+
+    showPopup(source);
+    input.value = "";
+
+  } catch (err){
+    console.error("Email API error:", err);
+    alert("Something went wrong. Try again.");
+  }
+});
 
   });
 
