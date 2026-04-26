@@ -21,11 +21,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const originalLabel = submitButton ? submitButton.textContent : "";
 
     try {
-      if (submitButton) {
-        submitButton.disabled = true;
-        submitButton.textContent = "Sending...";
-      }
-
       const res = await fetch("https://email-api.justingerad05.workers.dev/", {
   method: "POST",
   headers: {
