@@ -1751,6 +1751,8 @@ lazyImgs.forEach(img=>io.observe(img));
 });
 </script>
 
+<script src="${SITE_URL}/assets/email.js"></script>
+
 </body>
 </html>
 `;
