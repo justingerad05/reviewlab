@@ -16,14 +16,18 @@ document.addEventListener("DOMContentLoaded", function(){
     "Content-Type": "application/json"
   },
   body: JSON.stringify({
-    email: email,
-    source: source
+    email: email.trim(),
+    source: source || "unknown"
   })
 });
 
-        if(!res.ok){
-          throw new Error("API failed");
-        }
+// 🔥 DEBUG (important)
+const text = await res.text();
+console.log("API RESPONSE:", text);
+
+if(!res.ok){
+  throw new Error(text);
+}
 
         showPopup(source);
         input.value = "";
