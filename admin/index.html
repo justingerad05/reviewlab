@@ -140,6 +140,41 @@ function clearKey() {
     alert("Export error");
   }
 }
+
+  async function deleteUser(email) {
+  const key = document.getElementById("adminKey").value.trim();
+
+  if (!key) {
+    alert("Enter ADMIN_KEY first.");
+    return;
+  }
+
+  const confirmDelete = confirm(`Delete ${email}?`);
+  if (!confirmDelete) return;
+
+  try {
+    const res = await fetch(API + "/delete", {
+      method: "POST",
+      headers: {
+        "Authorization": "Bearer " + key,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ email })
+    });
+
+    if (!res.ok) {
+      alert("Delete failed");
+      return;
+    }
+
+    alert("Deleted");
+    loadUsers(); // refresh table
+
+  } catch (err) {
+    console.error(err);
+    alert("Error deleting user");
+  }
+}
   
 async function loadUsers() {
   const key = document.getElementById("adminKey").value.trim();
