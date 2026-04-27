@@ -129,7 +129,14 @@ function renderTable(users) {
       <td>${formatDate(u.lastClick)}</td>
       <td>${formatDate(u.lastSent)}</td>
       <td>${formatDate(u.createdAt)}</td>
-      <td>${escapeHtml(Array.isArray(u.tags) ? u.tags.join(", ") : String(u.tags || ""))}</td>
+      <td>${escapeHtml(() => {
+  try {
+    const t = JSON.parse(u.tags || "[]");
+    return Array.isArray(t) ? t.join(", ") : "";
+  } catch {
+    return "";
+  }
+})()}</td>
     </tr>
   `).join("");
 
