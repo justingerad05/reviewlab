@@ -41,6 +41,19 @@
   <div id="stats" class="stats"></div>
 </div>
 
+  <div class="card">
+  <h2>Send Email</h2>
+
+  <textarea id="emailMessage" placeholder="Write your message..." style="width:100%;height:120px;"></textarea>
+
+  <div class="row">
+    <button onclick="copyEmails()">📋 Copy Emails</button>
+    <button onclick="openGmail()">📬 Open Gmail Draft</button>
+  </div>
+
+  <p class="muted">Uses BCC for safe sending.</p>
+</div>
+  
 <div class="card">
   <h2>Subscribers</h2>
   <div id="out" class="muted">No data loaded yet.</div>
@@ -141,6 +154,50 @@ function clearKey() {
   }
 }
 
+  function getEmailsFromTable() {
+  const rows = document.querySelectorAll("tbody tr");
+  const emails = [];
+
+  rows.forEach(row => {
+    const email = row.children[0]?.textContent;
+    if (email) emails.push(email);
+  });
+
+  return emails;
+}
+
+  function copyEmails() {
+  const emails = getEmailsFromTable();
+
+  if (!emails.length) {
+    alert("No emails found");
+    return;
+  }
+
+  const list = emails.join(",");
+
+  navigator.clipboard.writeText(list);
+
+  alert("Emails copied! Paste into Gmail BCC.");
+}
+
+  function openGmail() {
+  const emails = getEmailsFromTable();
+  const message = document.getElementById("emailMessage").value || "";
+
+  if (!emails.length) {
+    alert("No emails found");
+    return;
+  }
+
+  const bcc = encodeURIComponent(emails.join(","));
+  const body = encodeURIComponent(message);
+
+  const url = `https://mail.google.com/mail/?view=cm&fs=1&bcc=${bcc}&body=${body}`;
+
+  window.open(url, "_blank");
+}
+  
   async function deleteUser(email) {
   const key = document.getElementById("adminKey").value.trim();
 
