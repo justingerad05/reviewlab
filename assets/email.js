@@ -77,8 +77,7 @@ function showPopup(source) {
 
   // 🔥 ONLY sidebar gets bonus
   if (source === "sidebar") {
-    title = "📩 Great choice!
-      🎁 Here's your bonus";
+    title = "📩 Great choice! 🎁 Here's your bonus";
     message = "More tools coming your way.";
 
     bonus = `
