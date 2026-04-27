@@ -190,10 +190,11 @@ function clearKey() {
     return;
   }
 
+  const to = encodeURIComponent("review4lab@gmail.com"); // ✅ your sender inbox
   const bcc = encodeURIComponent(emails.join(","));
   const body = encodeURIComponent(message);
 
-  const url = `https://mail.google.com/mail/?view=cm&fs=1&bcc=${bcc}&body=${body}`;
+  const url = `https://mail.google.com/mail/?view=cm&fs=1&to=${to}&bcc=${bcc}&body=${body}`;
 
   window.open(url, "_blank");
 }
