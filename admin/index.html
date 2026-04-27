@@ -200,27 +200,32 @@ function renderTable(users) {
   if (!users.length) return "<p class='muted'>No subscribers yet.</p>";
 
   const rows = users.map(u => `
-    <tr>
-      <td>${escapeHtml(u.email || "")}</td>
-      <td>${escapeHtml(u.source || "")}</td>
-      <td>${escapeHtml(String(u.step ?? ""))}</td>
-      <td>${escapeHtml(u.intent || "")}</td>
-      <td>${Number(u.clickedAffiliate) ? "Yes" : "No"}</td>
-      <td>${formatDate(u.lastClick)}</td>
-      <td>${formatDate(u.lastSent)}</td>
-      <td>${formatDate(u.createdAt)}</td>
-      <td>${
-  (() => {
-    try {
-      const t = JSON.parse(u.tags || "[]");
-      return Array.isArray(t) ? t.join(", ") : "";
-    } catch {
-      return "";
-    }
-  })()
-}</td>
-
-  `).join("");
+  <tr>
+    <td>${escapeHtml(u.email || "")}</td>
+    <td>${escapeHtml(u.source || "")}</td>
+    <td>${escapeHtml(String(u.step ?? ""))}</td>
+    <td>${escapeHtml(u.intent || "")}</td>
+    <td>${Number(u.clickedAffiliate) ? "Yes" : "No"}</td>
+    <td>${formatDate(u.lastClick)}</td>
+    <td>${formatDate(u.lastSent)}</td>
+    <td>${formatDate(u.createdAt)}</td>
+    <td>${
+      (() => {
+        try {
+          const t = JSON.parse(u.tags || "[]");
+          return Array.isArray(t) ? t.join(", ") : "";
+        } catch {
+          return "";
+        }
+      })()
+    }</td>
+    <td>
+      <button onclick="deleteUser('${u.email}')" style="background:#dc2626;">
+        Delete
+      </button>
+    </td>
+  </tr>
+`).join("");
 
   return `
     <table>
@@ -235,6 +240,7 @@ function renderTable(users) {
           <th>Last Sent</th>
           <th>Created</th>
           <th>Tags</th>
+          <th>Action</th>
         </tr>
       </thead>
       <tbody>${rows}</tbody>
