@@ -67,9 +67,9 @@ function showPopup(source, email) {
   popup.style.position = "fixed";
   popup.style.inset = "0";
   popup.style.display = "grid";
-  popup.style.place-Items = "center";
+  popup.style.place-items = "center";
   popup.style.background = "rgba(0,0,0,.45)";
-  popup.style.z-Index = "99999";
+  popup.style.z-index = "99999";
 
   let title = "📩 Great choice!";
   let message = "More tools coming your way.";
