@@ -11,7 +11,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const email = (input.value || "").trim();
     
-    const source = form.dataset.source || "unknown";
+    const source = form.dataset.source?.trim().toLowerCase() || "unknown";
 
     if (!email) {
       alert("Please enter your email.");
