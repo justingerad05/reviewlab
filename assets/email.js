@@ -71,13 +71,10 @@ function showPopup(source, email) {
   popup.style.background = "rgba(0,0,0,.45)";
   popup.style.zIndex = "99999";
 
-  let title = "📩 Great choice!";
-  let message = "More tools coming your way.";
   let bonus = "";
 
   if (source === "sidebar") {
     const trackedLink = `https://email-api.justingerad05.workers.dev/click?email=${encodeURIComponent(email)}&to=${encodeURIComponent("https://drive.google.com/file/d/1EPUhdkvyRV1y5SDpHVb4t7woPPnGzctC/view?usp=drive_link")}`;
-    
     
     bonus = `
       <a href="${trackedLink}"
