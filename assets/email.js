@@ -71,20 +71,30 @@ function showPopup(source) {
   popup.style.background = "rgba(0,0,0,.45)";
   popup.style.zIndex = "99999";
 
-  let message = "You're in!";
+  let title = "You're in!";
+  let message = "More tools coming your way.";
+  let bonus = "";
+
+  // 🔥 ONLY sidebar gets bonus
   if (source === "sidebar") {
-    message = "🎁 Bonus sent! Check your inbox.";
-  } else if (source === "homepage") {
-    message = "✅ Thanks for subscribing. Check your inbox.";
-  } else if (source === "post") {
-    message = "📩 Great choice. More reviews are on the way.";
+    title = "🎁 Here's your bonus";
+    message = "More tools coming your way.";
+
+    bonus = `
+      <a href="https://drive.google.com/file/d/1EPUhdkvyRV1y5SDpHVb4t7woPPnGzctC/view?usp=drive_link"
+         target="_blank"
+         style="display:inline-block;margin-top:12px;padding:12px 18px;background:#000;color:#fff;text-decoration:none;border-radius:8px;">
+        🚀 Access Your Bonus
+      </a>
+    `;
   }
 
   popup.innerHTML = `
-    <div class="popup-box" style="max-width:420px;width:calc(100% - 32px);background:#fff;border-radius:16px;padding:24px;box-shadow:0 20px 50px rgba(0,0,0,.25);text-align:center;">
-      <h3 style="margin:0 0 12px;">${message}</h3>
-      <p style="margin:0 0 16px;">More tools coming your way.</p>
-      <button type="button" style="padding:10px 16px;border:0;border-radius:10px;cursor:pointer;"
+    <div style="max-width:420px;width:calc(100% - 32px);background:#fff;border-radius:16px;padding:24px;box-shadow:0 20px 50px rgba(0,0,0,.25);text-align:center;">
+      <h3 style="margin:0 0 12px;">${title}</h3>
+      <p style="margin:0 0 16px;">${message}</p>
+      ${bonus}
+      <button style="margin-top:16px;padding:10px 16px;border:0;border-radius:10px;cursor:pointer;"
         onclick="this.closest('.email-popup').remove()">Close</button>
     </div>
   `;
