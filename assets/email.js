@@ -80,6 +80,8 @@ function showPopup(source, email) {
         🚀 Access Your Bonus
       </a>
     `;
+  } else if (source === "post") {
+    message = "📩 Great choice. More reviews are on the way.";
   }
 
   popup.innerHTML = `
