@@ -32,6 +32,7 @@
   <button type="button" onclick="loadUsers()">Load Users</button>
   <button type="button" class="secondary" onclick="clearKey()">Clear Key</button>
   <button type="button" style="background:#dc2626;" onclick="clearDatabase()">⚠️ Clear All Data</button>
+  <button type="button" onclick="exportCSV()">📥 Export CSV</button>
 </div>
 </div>
 
@@ -101,6 +102,42 @@ function clearKey() {
   } catch (err) {
     console.error(err);
     alert("Error clearing database");
+  }
+}
+
+  async function exportCSV() {
+  const key = document.getElementById("adminKey").value.trim();
+
+  if (!key) {
+    alert("Enter ADMIN_KEY first.");
+    return;
+  }
+
+  try {
+    const res = await fetch(API + "/export", {
+      headers: {
+        "Authorization": "Bearer " + key
+      }
+    });
+
+    if (!res.ok) {
+      alert("Export failed");
+      return;
+    }
+
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "subscribers.csv";
+    a.click();
+
+    window.URL.revokeObjectURL(url);
+
+  } catch (err) {
+    console.error(err);
+    alert("Export error");
   }
 }
   
