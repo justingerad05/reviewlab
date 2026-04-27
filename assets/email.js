@@ -63,13 +63,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
 function showPopup(source, email) {
   const popup = document.createElement("div");
-  Popup.className = "email-popup";
-  popup.style.position = "fixed";
-  popup.style.inset = "0";
-  popup.style.display = "grid";
-  popup.style.placeItems = "center";
-  popup.style.background = "rgba(0,0,0,.45)";
-  popup.style.zIndex = "99999";
 
   let bonus = "";
 
@@ -95,5 +88,8 @@ function showPopup(source, email) {
     </div>
   `;
 
+  popup.className = "email-popup";
+  popup.style = "position:fixed;inset:0;display:grid;place-items:center;background:rgba(0,0,0,.45);z-index:99999";
+  
   document.body.appendChild(popup);
 }
