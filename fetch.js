@@ -401,8 +401,13 @@ const articleSchema = {
 "mainEntityOfPage":url
 };
 
-// A post is considered a review if it isn't explicitly tagged as a supporting article or general guide
-const isReview = !(labels.includes("article") || labels.includes("supporting") || labels.includes("guide"));
+// AI Choice Selection based on Title inspection
+const lowerTitle = title.toLowerCase();
+const isReview = lowerTitle.includes("review") || 
+                 lowerTitle.includes("tested") || 
+                 lowerTitle.includes("vs") || 
+                 lowerTitle.includes("comparison") || 
+                 lowerTitle.includes("better");
 
 posts.push({
 title,
@@ -417,7 +422,7 @@ date:entry.published,
 lastmod: new Date().toISOString(),
 category: category,
 isReview: isReview,
-schemas: isReview ? JSON.stringify([articleSchema, productSchema]) : JSON.stringify([articleSchema])
+schemas: isReview ? JSON.stringify([articleSchema,productSchema]) : JSON.stringify([articleSchema])
 });
 }
 
@@ -691,14 +696,12 @@ const comparisonPairs = new Set();
 
 /* BUILD ALL COMPARISON PAGES */
 posts.forEach((postA, i) => {
-  // Skip generation if the base article is not a product review
-  if (!postA.isReview) return;
 
   const related = posts
     .filter(p =>
-      p.isReview &&
       p.slug !== postA.slug &&
-      p.category === postA.category
+      p.category === postA.category &&
+      p.isReview === postA.isReview // Reviews compare with reviews, supporting with supporting
     )
     .slice(0,3);
 
@@ -741,9 +744,9 @@ posts.forEach((postA, i) => {
 const comparisonLinks = [];
 
 for(let i=0;i<posts.length;i++){
-  if (!posts[i].isReview) continue; // Skip supporting articles from index
+  if (!posts[i].isReview) continue; // Supporting posts completely skip master comparisons lists
   for(let j=i+1;j<posts.length && j<i+4;j++){
-    if (!posts[j].isReview) continue; // Skip cross-comparing with non-reviews
+    if (!posts[j].isReview) continue; 
     const slugs = [posts[i].slug, posts[j].slug];
     const slug = `${posts[i].slug}-vs-${posts[j].slug}`;
     
@@ -847,9 +850,9 @@ const topics = {
 };
 
 // ✅ NEW: Post Rotator Logic
-// Filter out supporting articles so only genuine reviews can be used in dynamic CTAs
-const reviewOnlyPool = posts.filter(p => p.isReview);
-const topPosts = reviewOnlyPool.slice(0, 5).map(p => ({
+// Filter through the title selection pool to only allow reviews into the dynamic CTA targets
+const reviewPool = posts.filter(p => p.isReview);
+const topPosts = reviewPool.slice(0, 5).map(p => ({
   title: p.title,
   url: p.url
 }));
@@ -1326,11 +1329,13 @@ window.addEventListener("load", function(){
 });
 </script>
 
+${post.isReview ? `
 <div class="stroll-main-cta">
-  <h3>🚀 Recommended Tool</h3>
-  <p>Proven system beginners are using right now.</p>
-  <a href="javascript:void(0)" class="cta-btn">See Tool →</a>
+<h3>🚀 Recommended Tool</h3>
+<p>Proven system beginners are using right now.</p>
+<a href="javascript:void(0)" class="cta-btn">See Tool →</a>
 </div>
+` : ""}
 
 </body>
 </html>
