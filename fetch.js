@@ -355,6 +355,20 @@ const ratingValue = Math.min(5, (3.8 + (wordCount / 4000))).toFixed(1);
 /* 3. Safety Check - Corrected & Applied */
 const brandName = title.includes(" ") ? title.split(" ")[0] : title;
 
+/* --- BEGIN AI INTENT CLASSIFICATION FIX --- */
+  // Evaluates both blogger categorizations and lexical patterns to isolate pure reviews
+  const lowerTitle = title.toLowerCase();
+  const isSupporting = labels.includes("guide") || 
+                       labels.includes("tutorial") || 
+                       labels.includes("supporting") || 
+                       lowerTitle.includes("how to") || 
+                       lowerTitle.includes("guide") || 
+                       lowerTitle.includes("tutorial") ||
+                       wordCount < 400; // Shorter educational content
+
+  const postType = isSupporting ? "supporting" : "review";
+  /* --- END AI INTENT CLASSIFICATION FIX --- */
+  
 const productSchema = {
   "@context":"https://schema.org",
   "@type":"Product",
@@ -413,6 +427,7 @@ readTime,
 date:entry.published,
 lastmod: new Date().toISOString(),
 category: category,
+postType: postType,
 schemas:JSON.stringify([articleSchema,productSchema])
 });
 }
@@ -447,6 +462,13 @@ faqSchema
 });
 
 posts.sort((a,b)=> new Date(b.date)-new Date(a.date));
+
+/* --- BEGIN ARRAY FILTER SEGREGATION --- */
+// Isolate pure reviews for comparison engines and CTA dynamic selection pools
+const reviewOnlyPosts = posts.filter(p => p.postType === "review");
+const topReviewPosts = reviewOnlyPosts.slice(0, 5).map(p => ({ title: p.title, url: p.url }));
+const ctaJson = JSON.stringify(topReviewPosts);
+/* --- END ARRAY FILTER SEGREGATION --- */
 
 console.log("FIRST POST HTML:");
 console.log(posts[0]?.html);
@@ -685,68 +707,38 @@ fs.writeFileSync(
 const generatedComparisons = new Map();
 const comparisonPairs = new Set();
 
-/* BUILD ALL COMPARISON PAGES */
-posts.forEach((postA, i) => {
-
-  const related = posts
-    .filter(p =>
-      p.slug !== postA.slug &&
-      p.category === postA.category
-    )
-    .slice(0,3);
+/* --- BEGIN REVIEWS ONLY COMPARISON FILTER --- */
+reviewOnlyPosts.forEach((postA, i) => {
+  const related = reviewOnlyPosts
+    .filter(p => p.slug !== postA.slug && p.category === postA.category)
+    .slice(0, 3);
 
   related.forEach(postB => {
-
     const sorted = [postA.slug, postB.slug].sort();
     const pairKey = sorted.join("::");
-
     if(comparisonPairs.has(pairKey)) return;
-
     comparisonPairs.add(pairKey);
 
-    const slug =
-      `${sorted[0]}-vs-${sorted[1]}`;
+    const slug = `${sorted[0]}-vs-${sorted[1]}`;
 
-    // SAVE FOR A
-    if(!generatedComparisons.has(postA.slug)){
-      generatedComparisons.set(postA.slug, []);
-    }
+    if(!generatedComparisons.has(postA.slug)) generatedComparisons.set(postA.slug, []);
+    generatedComparisons.get(postA.slug).push({ slug, title: `${postA.title} vs ${postB.title}` });
 
-    generatedComparisons.get(postA.slug).push({
-      slug,
-      title: `${postA.title} vs ${postB.title}`
-    });
-
-    // SAVE FOR B
-    if(!generatedComparisons.has(postB.slug)){
-      generatedComparisons.set(postB.slug, []);
-    }
-
-    generatedComparisons.get(postB.slug).push({
-      slug,
-      title: `${postB.title} vs ${postA.title}`
-    });
+    if(!generatedComparisons.has(postB.slug)) generatedComparisons.set(postB.slug, []);
+    generatedComparisons.get(postB.slug).push({ slug, title: `${postB.title} vs ${postA.title}` });
 
     generateComparison(postA, postB);
   });
 });
 
 const comparisonLinks = [];
-
-for(let i=0;i<posts.length;i++){
-  for(let j=i+1;j<posts.length && j<i+4;j++){
-    const slugs = [posts[i].slug, posts[j].slug];
-    const slug = `${posts[i].slug}-vs-${posts[j].slug}`;
-    
-    comparisonLinks.push(`
-<li>
-<a href="${SITE_URL}/comparisons/${slug}/">
-${posts[i].title} vs ${posts[j].title}
-</a>
-</li>
-`);
+for(let i=0; i<reviewOnlyPosts.length; i++){
+  for(let j=i+1; j<reviewOnlyPosts.length && j<i+4; j++){
+    const slug = `${reviewOnlyPosts[i].slug}-vs-${reviewOnlyPosts[j].slug}`;
+    comparisonLinks.push(`<li><a href="${SITE_URL}/comparisons/${slug}/">${reviewOnlyPosts[i].title} vs ${reviewOnlyPosts[j].title}</a></li>`);
   }
 }
+/* --- END REVIEWS ONLY COMPARISON FILTER --- */
 
 fs.writeFileSync(`_site/comparisons/index.html`,`
 <!doctype html>
@@ -1070,21 +1062,19 @@ ${clusterBlock}
   <a href="javascript:void(0)" class="cta-btn">View Best Alternative →</a>
 </section>
   
-<section class="comparison-block">
-<h3>Compare This Tool</h3>
-<ul>
-${(generatedComparisons.get(post.slug) || [])
-.map(comp => `
-<li>
-<a href="${SITE_URL}/comparisons/${comp.slug}/">
-${comp.title}
-</a>
-</li>
-`).join("")}
-</ul>
-<p><strong>Don’t want to compare everything?</strong></p>
-<a href="javascript:void(0)" class="cta-btn">See Best Tool →</a>
-</section>
+/* --- BEGIN CONDITIONAL COMPARISON TOGGLE --- */
+  const comparisonSectionHtml = post.postType === "review" ? `
+  <section class="comparison-block">
+    <h3>Compare This Tool</h3>
+    <ul>
+      ${(generatedComparisons.get(post.slug) || []).map(comp => `
+        <li><a href="${SITE_URL}/comparisons/${comp.slug}/">${comp.title}</a></li>
+      `).join("")}
+    </ul>
+    <p><strong>Don’t want to compare everything?</strong></p>
+    <a href="javascript:void(0)" class="cta-btn">See Best Tool →</a>
+  </section>` : "";
+  /* --- END CONDITIONAL COMPARISON TOGGLE --- */
 
 <section class="internal-widget">
 <h3>Continue Reading</h3>
