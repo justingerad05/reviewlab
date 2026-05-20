@@ -829,13 +829,13 @@ const topics = {
   "automation-tools": []
 };
 
-// ✅ NEW: Post Rotator Logic
-// This creates a list of the 5 most recent posts to rotate through the CTAs
-const topPosts = posts.slice(0, 5).map(p => ({
+/* --- BEGIN ATOMIC CTA ASSIGNMENT FIX --- */
+// Dynamically synchronizes your post rotation pool exclusively with product reviews
+const topPosts = reviewOnlyPosts.slice(0, 5).map(p => ({
   title: p.title,
   url: p.url
 }));
-const ctaJson = JSON.stringify(topPosts);
+/* --- END ATOMIC CTA ASSIGNMENT FIX --- */
 
 posts.forEach(p=>{
  if(!topics[p.category]) topics[p.category]=[];
