@@ -1312,7 +1312,7 @@ window.addEventListener("load", function(){
 
 </body>
 </html>
-`;
+\`;
 
 fs.writeFileSync(`_site/posts/${post.slug}/index.html`,page);
 }
