@@ -715,7 +715,8 @@ posts.forEach((postA, i) => {
     .filter(p =>
       p.slug !== postA.slug &&
       p.category === postA.category &&
-      p.isReview === postA.isReview // Reviews match with reviews, guides match with guides
+      // Safeguard: Ensure both are explicitly marked reviews before pairing them
+      (postA.isReview === true && p.isReview === true)
     )
     .slice(0,3);
 
