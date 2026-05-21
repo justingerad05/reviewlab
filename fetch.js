@@ -403,12 +403,11 @@ const articleSchema = {
 
 // AI Choice Selection based on Title inspection
 const lowerTitle = title.toLowerCase();
-const isReview = lowerTitle.includes("tested") || 
-                 lowerTitle.includes("working") || 
-                 lowerTitle.includes("verdict") || 
-                 lowerTitle.includes("rating") || 
-                 lowerTitle.includes("results") || 
-                 lowerTitle.includes("worth it");
+const isReview = lowerTitle.includes("review") || 
+                 lowerTitle.includes("tested") || 
+                 lowerTitle.includes("vs") || 
+                 lowerTitle.includes("comparison") || 
+                 lowerTitle.includes("better");
 
 posts.push({
 title,
