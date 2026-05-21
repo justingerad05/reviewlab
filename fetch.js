@@ -404,7 +404,7 @@ const articleSchema = {
 // Strict validation rules to separate genuine reviews from informational guides
 const lowerTitle = title.toLowerCase();
 
-const containsReviewTriggers = lowerTitle.includes("review") || 
+const isReview = lowerTitle.includes("review") || 
                                lowerTitle.includes("tested") || 
                                lowerTitle.includes("working") || 
                                lowerTitle.includes("verdict") || 
@@ -715,8 +715,7 @@ posts.forEach((postA, i) => {
     .filter(p =>
       p.slug !== postA.slug &&
       p.category === postA.category &&
-      // Safeguard: Ensure both are explicitly marked reviews before pairing them
-      (postA.isReview === true && p.isReview === true)
+      p.isReview === postA.isReview // Reviews match with reviews, guides match with guides
     )
     .slice(0,3);
 
