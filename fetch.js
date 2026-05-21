@@ -401,27 +401,14 @@ const articleSchema = {
 "mainEntityOfPage":url
 };
 
-// Strict validation rules to separate genuine reviews from informational guides
+// AI Choice Selection based on Title inspection
 const lowerTitle = title.toLowerCase();
-
-const isReview = lowerTitle.includes("review") || 
-                               lowerTitle.includes("tested") || 
-                               lowerTitle.includes("working") || 
-                               lowerTitle.includes("verdict") || 
-                               lowerTitle.includes("rating") || 
-                               lowerTitle.includes("results") || 
-                               lowerTitle.includes("worth it");
-
-const containsGuideTriggers = lowerTitle.includes("guide") || 
-                             lowerTitle.includes("tutorial") || 
-                             lowerTitle.includes("how to") || 
-                             lowerTitle.includes("vs") || 
-                             lowerTitle.includes("comparison") || 
-                             lowerTitle.includes("how") || 
-                             lowerTitle.includes("tips");
-
-// It is only an evaluation review if it hits triggers and isn't labeled an info guide
-const isReview = containsReviewTriggers && !containsGuideTriggers;
+const isReview = lowerTitle.includes("tested") || 
+                 lowerTitle.includes("working") || 
+                 lowerTitle.includes("verdict") || 
+                 lowerTitle.includes("rating") || 
+                 lowerTitle.includes("results") || 
+                 lowerTitle.includes("worth it");
 
 posts.push({
 title,
@@ -715,7 +702,7 @@ posts.forEach((postA, i) => {
     .filter(p =>
       p.slug !== postA.slug &&
       p.category === postA.category &&
-      p.isReview === postA.isReview // Reviews match with reviews, guides match with guides
+      p.isReview === postA.isReview // Reviews compare with reviews, supporting with supporting
     )
     .slice(0,3);
 
