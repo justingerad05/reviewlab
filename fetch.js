@@ -405,8 +405,11 @@ const articleSchema = {
 const lowerTitle = title.toLowerCase();
 const isReview = lowerTitle.includes("review") || 
                  lowerTitle.includes("tested") || 
-                 lowerTitle.includes("vs") || 
-                 lowerTitle.includes("comparison") || 
+                 lowerTitle.includes("working") || 
+                 lowerTitle.includes("verdict") || 
+                 lowerTitle.includes("rating") || 
+                 lowerTitle.includes("results") || 
+                 lowerTitle.includes("worth it") ||
                  lowerTitle.includes("better");
 
 posts.push({
@@ -700,11 +703,10 @@ posts.forEach((postA, i) => {
   const related = posts
     .filter(p =>
       p.slug !== postA.slug &&
-      p.category === postA.category &&
-      p.isReview === postA.isReview // Reviews compare with reviews, supporting with supporting
+      p.category === postA.category
     )
     .slice(0,3);
-
+  
   related.forEach(postB => {
 
     const sorted = [postA.slug, postB.slug].sort();
