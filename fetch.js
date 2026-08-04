@@ -211,7 +211,6 @@ enriched = enriched.replace(regex,
 );
 }
 });
-
 return enriched;
 }
 
@@ -228,16 +227,91 @@ const t=s.toLowerCase();
 if(t.includes("easy")||t.includes("fast")||t.includes("powerful")||t.includes("excellent")||t.includes("simple")){
 pros.push(s.trim());
 }
-
 if(t.includes("expensive")||t.includes("slow")||t.includes("difficult")||t.includes("limited")||t.includes("problem")){
 cons.push(s.trim());
 }
 });
-
 return {
 pros:pros.slice(0,3),
 cons:cons.slice(0,3)
 };
+}
+
+/* =========================
+   PHASE 2.1 — REVIEW SCORE ENGINE
+========================= */
+function calculateReviewScore({
+  textLength,
+  pros,
+  cons,
+  productMatch,
+  isReview,
+  title
+}) {
+  let score = 70;
+
+  const breakdown = {
+    contentDepth: 0,
+    prosCons: 0,
+    productDatabase: 0,
+    reviewSignals: 0
+  };
+  // 1. CONTENT DEPTH SCORE
+  if(textLength > 1500){
+    breakdown.contentDepth = 10;
+  } 
+  else if(textLength > 800){
+    breakdown.contentDepth = 6;
+  }
+  else {
+    breakdown.contentDepth = 3;
+  }
+  // 2. PROS / CONS SCORE
+  if(pros.length >= 2 && cons.length >= 2){
+    breakdown.prosCons = 8;
+  }
+  else if(pros.length || cons.length){
+    breakdown.prosCons = 4;
+  }
+  // 3. PRODUCT DATABASE SCORE
+  if(productMatch){
+    breakdown.productDatabase = 7;
+  }
+  // 4. REVIEW INTENT SCORE
+  const reviewWords = [
+    "review",
+    "tested",
+    "results",
+    "comparison",
+    "verdict",
+    "worth",
+    "rating"
+  ];
+  const lower = title.toLowerCase();
+
+  const foundSignals = reviewWords.filter(word =>
+    lower.includes(word)
+  );
+  if(isReview && foundSignals.length >= 2){
+    breakdown.reviewSignals = 5;
+  }
+  else if(isReview){
+    breakdown.reviewSignals = 3;
+  }
+  score +=
+    breakdown.contentDepth +
+    breakdown.prosCons +
+    breakdown.productDatabase +
+    breakdown.reviewSignals;
+
+  if(score > 100){
+    score = 100;
+  }
+  return {
+    score,
+    ratingValue: (score / 20).toFixed(1),
+    breakdown
+  };
 }
 
 const seenSlugs = new Set();
@@ -281,7 +355,6 @@ function detectTopic(title, html) {
       bestCategory = category;
     }
   }
-
   return bestCategory;
 }
 
@@ -295,7 +368,6 @@ for(const entry of entries){
   } else if (entry.summary) {
       rawHtml = getText(entry.summary);
   }
-
   if (!rawHtml || rawHtml.trim().length < 10) {
     console.log(`⚠ Skipping post "${title}" - Content is empty or too short.`);
     continue;
@@ -357,7 +429,17 @@ const {pros,cons} = extractProsCons(textOnly);
 
 /* SCHEMA */
 const wordCount = textOnly.split(/\s+/).length;
-const ratingValue = Math.min(5, (3.8 + (wordCount / 4000))).toFixed(1);
+const productMatch = getProductData(title);
+
+const reviewScore = calculateReviewScore({
+  textLength: wordCount,
+  pros,
+  cons,
+  productMatch,
+  isReview,
+  title
+});
+const ratingValue = reviewScore.ratingValue;
 
 /* 3. Safety Check - Corrected & Applied */
 const brandName = title.includes(" ") ? title.split(" ")[0] : title;
@@ -430,7 +512,8 @@ readTime,
 date:entry.published,
 lastmod: new Date().toISOString(),
 category: category,
-product: getProductData(title),
+product: productMatch,
+score: reviewScore,
 isReview: isReview,
 schemas: isReview ? JSON.stringify([articleSchema,productSchema]) : JSON.stringify([articleSchema])
 });
