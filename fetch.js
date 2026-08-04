@@ -58,7 +58,6 @@ import products from "./_data/products.json" with { type: "json" };
 const SITE_URL = site.url;
 
 function globalHeader(){
-
 return `
 <header class="site-header">
 <div class="nav-container">
