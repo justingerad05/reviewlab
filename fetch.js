@@ -410,13 +410,9 @@ while(seenSlugs.has(slug)){
 }
 
 seenSlugs.add(slug);
-
 const url = `${SITE_URL}/posts/${slug}/`;
-
 const textOnly = rawHtml.replace(/<[^>]+>/g," ");
-
 const description = textOnly.slice(0,155);
-
 const ogImages = await getYouTubeImages(rawHtml,slug);
 const primaryOG = ogImages[0];
 
@@ -429,6 +425,16 @@ const {pros,cons} = extractProsCons(textOnly);
 /* SCHEMA */
 const wordCount = textOnly.split(/\s+/).length;
 const productMatch = getProductData(title);
+
+// AI Choice Selection based on Title inspection
+const lowerTitle = title.toLowerCase();
+const isReview = lowerTitle.includes("review") || 
+                 lowerTitle.includes("working") || 
+                 lowerTitle.includes("verdict") || 
+                 lowerTitle.includes("rating") || 
+                 lowerTitle.includes("results") || 
+                 lowerTitle.includes("worth it") ||
+                 lowerTitle.includes("better");
 
 const reviewScore = calculateReviewScore({
   textLength: wordCount,
@@ -488,16 +494,6 @@ const articleSchema = {
 "description":description,
 "mainEntityOfPage":url
 };
-
-// AI Choice Selection based on Title inspection
-const lowerTitle = title.toLowerCase();
-const isReview = lowerTitle.includes("review") || 
-                 lowerTitle.includes("working") || 
-                 lowerTitle.includes("verdict") || 
-                 lowerTitle.includes("rating") || 
-                 lowerTitle.includes("results") || 
-                 lowerTitle.includes("worth it") ||
-                 lowerTitle.includes("better");
 
 posts.push({
 title,
