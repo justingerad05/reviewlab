@@ -384,6 +384,24 @@ const productSchema = {
 }
 };
 
+  const comparisonSchema = {
+"@context":"https://schema.org",
+"@type":"ItemList",
+"name":title,
+"itemListElement":[
+{
+"@type":"ListItem",
+"position":1,
+"name":comparison.products[0]
+},
+{
+"@type":"ListItem",
+"position":2,
+"name":comparison.products[1]
+}
+]
+};
+  
 const articleSchema = {
 "@context":"https://schema.org",
 "@type":"Review",
