@@ -1,21 +1,33 @@
 [
-{
-"name":"ChatGPT",
-"category":"AI Writing",
-"price":"Subscription",
-"website":"https://chat.openai.com",
-"trial":"Yes",
-"refund":"Unknown",
-"score":9.5,
-"lastUpdated":"August 2026",
-"bestFor":[
-"Bloggers",
-"Creators",
-"Affiliate marketers"
-],
-"alternative":[
-"Claude",
-"Gemini"
-]
-}
+  {
+    "name": "SoundSoReal",
+    "slug": "sound-soreal",
+    "category": "ai-voice-tools",
+    "price": "Paid",
+    "website": "https://soundsoreal.com",
+    "trial": true,
+    "refund": true,
+    "score": 9,
+    "lastUpdated": "August 2026",
+    "bestFor": [
+      "YouTube creators",
+      "Faceless channels",
+      "Affiliate marketers"
+    ],
+    "alternative": [
+      "ElevenLabs",
+      "Murf AI"
+    ],
+    "features": [
+      "AI voice generation",
+      "Voice cloning",
+      "Text to speech"
+    ],
+    "keywords": [
+      "AI voice",
+      "voice generator",
+      "text to speech",
+      "AI narration"
+    ]
+  }
 ]
