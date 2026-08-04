@@ -1,0 +1,65 @@
+[
+  {
+    "id":"soundsoReal",
+
+    "name":"SoundSoReal",
+
+    "category":"AI Voice Generator",
+
+    "website":"https://soundsoreal.com",
+
+    "affiliate":"",
+    
+    "pricing":{
+      "model":"subscription",
+      "trial":true,
+      "refund":true
+    },
+
+    "score":{
+      "features":9,
+      "easeOfUse":8,
+      "pricing":7,
+      "support":9,
+      "automation":10,
+      "accuracy":9
+    },
+
+    "bestFor":[
+      "YouTube creators",
+      "Affiliate marketers",
+      "Content creators"
+    ],
+
+    "avoidFor":[
+      "Users needing offline software"
+    ],
+
+    "keywords":[
+      "AI voice",
+      "voice generator",
+      "AI narration"
+    ],
+
+    "alternatives":[
+      "ElevenLabs",
+      "Murf",
+      "PlayHT"
+    ],
+
+    "lastUpdated":"2026-08",
+
+    "version":"4.2",
+
+    "review":{
+      "testDuration":"18 days",
+      "platforms":[
+        "Windows",
+        "Mac",
+        "Web",
+        "Mobile"
+      ],
+      "reviewer":"Justin Gerald"
+    }
+  }
+]
