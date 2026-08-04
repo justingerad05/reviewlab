@@ -1,0 +1,31 @@
+{
+ "AI Voice":{
+    "entities":[
+      {
+       "name":"SoundSoReal",
+       "type":"SoftwareApplication"
+      },
+      {
+       "name":"ElevenLabs",
+       "type":"SoftwareApplication"
+      },
+      {
+       "name":"OpenAI",
+       "type":"Organization"
+      }
+    ]
+ },
+
+ "AI Writing":{
+    "entities":[
+      {
+       "name":"ChatGPT",
+       "type":"SoftwareApplication"
+      },
+      {
+       "name":"Claude",
+       "type":"SoftwareApplication"
+      }
+    ]
+ }
+}
