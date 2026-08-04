@@ -216,9 +216,7 @@ return enriched;
 }
 
 /* PROS / CONS */
-
 function extractProsCons(text){
-
 const sentences = text.split(/[.!?]/);
 
 const pros=[];
@@ -288,7 +286,6 @@ function detectTopic(title, html) {
 }
 
 /* BUILD DATA (Reinforced) */
-
 for(const entry of entries){
   let title = getText(entry.title) || "Untitled Post " + Date.now();
 
@@ -392,24 +389,6 @@ const productSchema = {
    "bestRating":"5"
  }
 }
-};
-
-  const comparisonSchema = {
-"@context":"https://schema.org",
-"@type":"ItemList",
-"name":title,
-"itemListElement":[
-{
-"@type":"ListItem",
-"position":1,
-"name":comparison.products[0]
-},
-{
-"@type":"ListItem",
-"position":2,
-"name":comparison.products[1]
-}
-]
 };
   
 const articleSchema = {
