@@ -53,6 +53,7 @@ const FEED_URL =
 "https://honestproductreviewlab.blogspot.com/feeds/posts/default?alt=atom";
 
 import site from "./_data/site.json" with { type: "json" };
+import products from "./_data/products.json" with { type: "json" };
 
 const SITE_URL = site.url;
 
@@ -245,6 +246,15 @@ const seenSlugs = new Set();
 
 const posts=[];
 
+function getProductData(title){
+const text = title.toLowerCase();
+
+return products.find(product =>
+text.includes(product.name.toLowerCase()) ||
+text.includes(product.slug.replace(/-/g," "))
+) || null;
+}
+
 function detectTopic(title, html) {
   if (!title && !html) return "ai-writing-tools"; // Absolute safety fallback
   const content = (title + " " + html).toLowerCase();
@@ -432,15 +442,16 @@ const isReview = lowerTitle.includes("review") ||
 posts.push({
 title,
 slug,
-html:rawHtml,
+html: rawHtml,
 url,
 description,
-og:primaryOG,
-thumb:primaryOG,
+og: primaryOG,
+thumb: primaryOG,
 readTime,
 date:entry.published,
 lastmod: new Date().toISOString(),
 category: category,
+product: getProductData(title),
 isReview: isReview,
 schemas: isReview ? JSON.stringify([articleSchema,productSchema]) : JSON.stringify([articleSchema])
 });
