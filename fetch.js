@@ -1368,7 +1368,6 @@ src="${item.thumb}"
 alt="${item.title}"
 class="recommend-thumb"
 width="680"
-height="0">
 <h3>${item.title}</h3>
 <p>${item.description}</p>
 </a>
