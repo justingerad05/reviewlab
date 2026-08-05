@@ -516,9 +516,7 @@ schemas: isReview ? JSON.stringify([articleSchema,productSchema]) : JSON.stringi
 
 /* APPLY LINKS */
 posts.forEach(p=>{
-
 p.html = injectInternalLinks(p.html,posts,p);
-
 const faqs = extractFAQs(p.html);
 
 if(faqs.length){
@@ -540,14 +538,11 @@ p.schemas = JSON.stringify([
 faqSchema
 ]);
 }
-
 });
 
 posts.sort((a,b)=> new Date(b.date)-new Date(a.date));
-
 console.log("FIRST POST HTML:");
 console.log(posts[0]?.html);
-
 const POSTS_PER_PAGE = 10;
 const totalPages = Math.ceil(posts.length / POSTS_PER_PAGE);
 
@@ -581,8 +576,30 @@ function generateToC(html) {
     const hRegex = new RegExp(`(<h2.*?>)${h.text}(<\/h2>)`, "i");
     updatedHtml = updatedHtml.replace(hRegex, `<h2 id="${h.id}">${h.text}</h2>`);
   });
-
   return { tocHtml, updatedHtml };
+}
+
+function generateTrustBlock(post){
+return `
+<section class="trust-review-box">
+
+<h2>Why You Can Trust This Review</h2>
+
+<ul class="trust-list">
+<li>✔ Product researched using our structured review methodology.</li>
+<li>✔ Features compared against competing software.</li>
+<li>✔ Pros, limitations and overall value independently evaluated.</li>
+<li>✔ Review score generated from ReviewLab's scoring framework.</li>
+</ul>
+<div class="review-score">
+
+<strong>Overall Score:</strong>
+${post.score.score}/100
+(${post.score.ratingValue}/5)
+
+</div>
+</section>
+`;
 }
 
  /* =========================
@@ -651,9 +668,7 @@ fs.writeFileSync("_site/sitemap.xml",
  /* =========================
    RSS FEED GENERATOR
 ========================= */
-
 function generateRSS(posts){
-
 const rss = `<?xml version="1.0" encoding="UTF-8" ?>
 <rss version="2.0">
 <channel>
@@ -670,7 +685,6 @@ ${posts.slice(0,20).map(post=>`
 <pubDate>${new Date(post.date).toUTCString()}</pubDate>
 </item>
 `).join("")}
-
 </channel>
 </rss>`;
 
@@ -867,7 +881,6 @@ ${globalHeader()}
 `);
 
 function generateTopList(category, posts){
-
   const filtered = posts.filter(p=>p.category===category);
   const top = filtered.slice(0,10);
 
@@ -906,7 +919,6 @@ This category contains ${filtered.length} in-depth reviews focused on performanc
 ROI, usability, and competitive analysis.
 </p>
 </div>
-
 </div>
 </body>
 </html>
@@ -920,7 +932,6 @@ generateTopList("ai-image-generators", posts);
 generateTopList("automation-tools", posts);
 
 function formatCategoryTitle(slug){
-
 if(slug==="ai-writing-tools") return "AI Writing Software";
 if(slug==="ai-image-generators") return "AI Image Generation Tools";
 if(slug==="automation-tools") return "AI Automation Software";
@@ -1119,6 +1130,9 @@ ${breadcrumbSchema}
 <p class="sub">
 By <a href="${SITE_URL}/author/" rel="author">Justin Gerald</a> • ${post.readTime} min read
 </p>
+
+${post.isReview ? generateTrustBlock(post) : ""}
+
 <section class="post-inline-email">
 <p><strong>Want deeper AI tool breakdowns?</strong></p>
 
