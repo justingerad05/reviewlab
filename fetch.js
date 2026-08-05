@@ -190,7 +190,6 @@ return aw.filter(w=>bw.includes(w)).length;
 }
 
 function injectInternalLinks(html, posts, current){
-
 const ranked = posts
 .filter(p=>p.slug!==current.slug)
 .map(p=>({post:p,score:scoreSimilarity(current.title,p.title)}))
@@ -318,12 +317,33 @@ const seenSlugs = new Set();
 const posts=[];
 
 function getProductData(title){
+
 const text = title.toLowerCase();
 
-return products.find(product =>
+const product = products.find(product =>
 text.includes(product.name.toLowerCase()) ||
 text.includes(product.slug.replace(/-/g," "))
-) || null;
+);
+
+if(!product) return null;
+
+return {
+slug: product.slug || "",
+name: product.name || "",
+brand: product.brand || product.name || "",
+developer: product.developer || "",
+category: product.category || "",
+website: product.website || "",
+price: product.price || "",
+pricingModel: product.pricingModel || "",
+rating: product.rating || 4.5,
+reviewed: product.reviewed ?? true,
+featured: product.featured ?? false,
+affiliate: product.affiliate || "",
+pros: product.pros || [],
+cons: product.cons || [],
+bestFor: product.bestFor || []
+};
 }
 
 function detectTopic(title, html) {
@@ -425,6 +445,7 @@ const {pros,cons} = extractProsCons(textOnly);
 /* SCHEMA */
 const wordCount = textOnly.split(/\s+/).length;
 const productMatch = getProductData(title);
+const productInfo = productMatch || {};
 
 // AI Choice Selection based on Title inspection
 const lowerTitle = title.toLowerCase();
@@ -447,18 +468,30 @@ const reviewScore = calculateReviewScore({
 const ratingValue = reviewScore.ratingValue;
 
 /* 3. Safety Check - Corrected & Applied */
-const brandName = title.includes(" ") ? title.split(" ")[0] : title;
+const brandName =
+productInfo.brand ||
+(title.includes(" ")
+? title.split(" ")[0]
+: title);
 
 const productSchema = {
   "@context":"https://schema.org",
   "@type":"Product",
   "name":escapeJson(title),
   "image":primaryOG,
+  "category": productInfo.category || "",
+  "offers":{
+"@type":"Offer",
+"url":productInfo.website || post?.url || "",
+"price":productInfo.price || "",
+"priceCurrency":"USD",
+"availability":"https://schema.org/InStock"
+},
   // ...and we USE brandName here instead of title.split(" ")[0]
-  "brand": {
-    "@type": "Brand", 
-    "name": brandName 
-  },
+  "brand":{
+"@type":"Brand",
+"name":productInfo.brand || brandName
+},
 "aggregateRating":{
  "@type":"AggregateRating",
  "ratingValue":ratingValue,
@@ -507,7 +540,7 @@ readTime,
 date:entry.published,
 lastmod: new Date().toISOString(),
 category: category,
-product: productMatch,
+product: productInfo,
 score: reviewScore,
 isReview: isReview,
 schemas: isReview ? JSON.stringify([articleSchema,productSchema]) : JSON.stringify([articleSchema])
@@ -798,7 +831,6 @@ const comparisonPairs = new Set();
 
 /* BUILD ALL COMPARISON PAGES */
 posts.forEach((postA, i) => {
-
   const related = posts
     .filter(p =>
       p.slug !== postA.slug &&
@@ -860,8 +892,8 @@ ${posts[i].title} vs ${posts[j].title}
 `);
   }
 }
-
 fs.writeFileSync(`_site/comparisons/index.html`,`
+
 <!doctype html>
 <html>
 <head>
@@ -962,7 +994,6 @@ posts.forEach(p=>{
 });
 
 function extractFAQs(html){
-
 const questions = [];
 const regex = /<h2>(.*?)<\/h2>/g;
 let match;
@@ -1481,25 +1512,21 @@ ${formatCategoryTitle(cat)} (${topics[cat].length})
 </a>
 </li>
 `).join("");
-
 fs.writeFileSync(`_site/ai-tools/index.html`, `
+
 <!doctype html>
 <html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-
 <title>Best AI Tools (Tested & Ranked)</title>
 <meta name="description" content="Discover the best AI tools ranked by real testing, ROI, and performance.">
-
 <link rel="canonical" href="${SITE_URL}/ai-tools/">
 <link rel="stylesheet" href="${SITE_URL}/assets/styles.css">
 
 </head>
-
 <body>
 ${globalHeader()}
-
 <div class="container">
 
 <h1>Best AI Tools (Tested & Ranked)</h1>
@@ -1648,8 +1675,8 @@ const list = tags[tag]
 
 const dir = `_site/tag/${tag}`;
 fs.mkdirSync(dir,{recursive:true});
-
 fs.writeFileSync(`${dir}/index.html`,`
+
 <!doctype html>
 <html>
 <head>
@@ -1701,7 +1728,6 @@ fs.writeFileSync(`_site/author/index.html`,`
 <title>Justin Gerald — Product Review Analyst</title>
 <link rel="canonical" href="${SITE_URL}/author/">
 <link rel="stylesheet" href="${SITE_URL}/assets/styles.css">
-
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
