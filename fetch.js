@@ -212,6 +212,53 @@ enriched = enriched.replace(regex,
 return enriched;
 }
 
+/* =========================
+   SEMANTIC RELATED REVIEW ENGINE
+========================= */
+function generateRelatedReviews(currentPost, allPosts){
+const related = allPosts
+.filter(post => post.slug !== currentPost.slug)
+.map(post=>{
+
+let score = 0;
+
+// Same category gets biggest boost
+if(post.category === currentPost.category)
+score += 50;
+
+// Similar title words
+score += scoreSimilarity(currentPost.title, post.title) * 8;
+
+// Same product brand
+if(
+currentPost.product?.brand &&
+post.product?.brand &&
+currentPost.product.brand === post.product.brand
+){
+score += 30;
+}
+
+// Same developer
+if(
+currentPost.product?.developer &&
+post.product?.developer &&
+currentPost.product.developer === post.product.developer
+){
+score += 20;
+}
+
+// Both review pages
+if(post.isReview && currentPost.isReview){
+score += 10;
+}
+return { post, score };
+})
+.sort((a,b)=>b.score-a.score)
+.slice(0,6)
+.map(x=>x.post);
+return related;
+}
+
 /* PROS / CONS */
 function extractProsCons(text){
 const sentences = text.split(/[.!?]/);
@@ -1145,21 +1192,7 @@ fs.mkdirSync(`_site/posts/${post.slug}`,{recursive:true});
 /* SAFE RECOMMENDATION ENGINE */
 const { tocHtml, updatedHtml } = generateToC(post.html);
 
-const relatedPosts = posts
-.filter(p=>p.slug!==post.slug)
-.map(p=>{
-  let score = 0;
-  if(p.category === post.category) score += 10; // Boost same category
-  score += scoreSimilarity(post.title, p.title) * 2; // High weight on title similarity
-  
-  // Random "Variety" boost to prevent the same 3 posts showing everywhere
-  score += Math.random() * 5; 
-
-  return {post:p, score};
-})
-.sort((a,b)=>b.score-a.score)
-.slice(0,4)
-.map(r=>r.post);
+const relatedPosts = generateRelatedReviews(post, posts).slice(0,4);
 
 let inlinePosts = posts
 .filter(p=>p.slug!==post.slug && !relatedPosts.some(r=>r.slug===p.slug))
