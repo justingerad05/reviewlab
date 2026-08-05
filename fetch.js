@@ -482,8 +482,8 @@ const productSchema = {
   "category": productInfo.category || "",
   "offers":{
 "@type":"Offer",
-"url":productInfo.website || post?.url || "",
-"price":productInfo.price || "",
+"url": productInfo.website || url || "",
+"price": productInfo.price || "",
 "priceCurrency":"USD",
 "availability":"https://schema.org/InStock"
 },
