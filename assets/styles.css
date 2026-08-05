@@ -1,5 +1,4 @@
 /* ===== Basic Background Test ===== */
-
 body.homepage-bg{
   background-image:url("/assets/hero-bg.webp");
   background-size:cover;
@@ -1363,6 +1362,41 @@ body::before{
   pointer-events: none !important;
 }
 
+.product-summary-box{
+background:#ffffff;
+border-radius:16px;
+padding:25px;
+margin:30px 0;
+border:1px solid #e5e7eb;
+}
+
+.product-summary-box h2{
+margin-top:0;
+}
+
+
+.product-rating{
+font-size:22px;
+font-weight:bold;
+margin-bottom:20px;
+}
+
+.product-columns{
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:25px;
+}
+
+.product-columns ul{
+padding-left:20px;
+}
+
+@media(max-width:700px){
+.product-columns{
+grid-template-columns:1fr;
+}
+}
+  
   /* ===== FINAL CLICK FIX ===== */
 
 .site-header{
