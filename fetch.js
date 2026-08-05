@@ -962,6 +962,7 @@ ROI, usability, and competitive analysis.
 generateTopList("ai-writing-tools", posts);
 generateTopList("ai-image-generators", posts);
 generateTopList("automation-tools", posts);
+generateTopList("ai-voice-tools", posts);
 
 function formatCategoryTitle(slug){
 if(slug==="ai-writing-tools") return "AI Writing Software";
