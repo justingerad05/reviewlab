@@ -1420,11 +1420,3 @@ grid-template-columns:1fr;
 }
   
 }
-
-.recommend-thumb {
-  width: 110px;
-  height: 0;
-  object-fit: cover;
-  border-radius: 8px;
-  display: block;
-}
