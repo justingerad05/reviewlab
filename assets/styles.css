@@ -613,11 +613,6 @@ h1{
 .meta{font-size:13px;color:#94a3b8;margin-top:4px;}
 .hover-preview{position:absolute;display:none;width:340px;border-radius:14px;box-shadow:0 25px 70px rgba(0,0,0,.55);z-index:9999;pointer-events:none;}
 
-.hover-preview {
-    pointer-events: none;
-    z-index: -1;
-}
-
 .email-capture {
   margin: 80px auto;
   max-width: 560px;
