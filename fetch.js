@@ -1194,8 +1194,8 @@ const { tocHtml, updatedHtml } = generateToC(post.html);
 
 const relatedPosts = generateRelatedReviews(post, posts).slice(0,4);
 
-let inlinePosts = posts
-.filter(p=>p.slug!==post.slug && !relatedPosts.some(r=>r.slug===p.slug))
+let inlinePosts = generateRelatedReviews(post, posts)
+.filter(p=>!relatedPosts.some(r=>r.slug===p.slug))
 .slice(0,3);
 
 /* HARD fallback — guarantees links always render */
@@ -1273,7 +1273,7 @@ ${clusterPosts.map(p=>`
 </ul>
 </section>
 ` : "";
-
+  
 const page = `<!doctype html>
 <html lang="en">
 <head>
@@ -1353,6 +1353,27 @@ ${updatedHtml.replace(/(<p>.*?<\/p>){2}/, `$&`)}
 </section>
 
 ${clusterBlock}
+
+<section class="reader-recommendations">
+<h2>You May Also Like</h2>
+<div class="recommendation-grid">
+${generateRelatedReviews(post, posts)
+.slice(0,6)
+.map(item=>`
+<div class="recommend-card">
+<a href="${item.url}">
+<img
+loading="lazy"
+src="${item.thumb}"
+alt="${item.title}"
+class="recommend-thumb">
+<h3>${item.title}</h3>
+<p>${item.description}</p>
+</a>
+</div>
+`).join("")}
+</div>
+</section>
 
 <section class="decision-cta">
   <h3>So… is this tool actually worth it?</h3>
