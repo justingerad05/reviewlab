@@ -524,6 +524,11 @@ const articleSchema = {
 "name":"ReviewLab",
 "logo":{"@type":"ImageObject","url":CTA}
 },
+"reviewedBy":{
+ "@type":"Organization",
+ "name":"ReviewLab",
+ "url":"https://reviewlab.pages.dev/review-methodology/"
+},
 "description":description,
 "mainEntityOfPage":url
 };
