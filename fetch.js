@@ -629,7 +629,58 @@ return `
 <strong>Overall Score:</strong>
 ${post.score.score}/100
 (${post.score.ratingValue}/5)
+</div>
+</section>
+`;
+}
 
+function generateProductBox(post){
+if(!post.product || !post.isReview){
+return "";
+}
+const p = post.product;
+return `
+<section class="product-summary-box">
+<h2>${p.name} Overview</h2>
+
+<div class="product-rating">
+⭐ Rating: ${p.rating || "N/A"}/5
+</div>
+<div class="product-details">
+
+<p>
+<strong>Category:</strong>
+${p.category || "AI Tool"}
+</p>
+
+<p>
+<strong>Pricing:</strong>
+${p.price || "Check latest pricing"}
+</p>
+
+<p>
+<strong>Best For:</strong>
+${(p.bestFor || []).join(", ")}
+</p>
+
+</div>
+<div class="product-columns">
+<div>
+<h3>✅ Pros</h3>
+<ul>
+${(p.pros || [])
+.map(x=>`<li>${x}</li>`)
+.join("")}
+</ul>
+</div>
+<div>
+<h3>⚠ Limitations</h3>
+<ul>
+${(p.cons || [])
+.map(x=>`<li>${x}</li>`)
+.join("")}
+</ul>
+</div>
 </div>
 </section>
 `;
@@ -1164,6 +1215,7 @@ By <a href="${SITE_URL}/author/" rel="author">Justin Gerald</a> • ${post.readT
 </p>
 
 ${post.isReview ? generateTrustBlock(post) : ""}
+${post.isReview ? generateProductBox(post) : ""}
 
 <section class="post-inline-email">
 <p><strong>Want deeper AI tool breakdowns?</strong></p>
