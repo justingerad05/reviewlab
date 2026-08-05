@@ -1367,6 +1367,7 @@ loading="lazy"
 src="${item.thumb}"
 alt="${item.title}"
 class="recommend-thumb"
+width="110"
 <h3>${item.title}</h3>
 <p>${item.description}</p>
 </a>
