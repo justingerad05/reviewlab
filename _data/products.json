@@ -31,3 +31,26 @@
     ]
   }
 ]
+
+[
+  {
+    "slug": "dfy-ai-suite",
+    "name": "DFY AI Suite",
+    "brand": "DFY AI Suite",
+    "developer": "DFY AI",
+    "category": "AI Marketing",
+    "website": "https://example.com",
+    "price": "$67",
+    "pricingModel": "One-time",
+    "rating": 4.9,
+    "reviewed": true,
+    "featured": true,
+    "affiliate": "",
+    "pros": [],
+    "cons": [],
+    "bestFor": [
+      "Affiliate Marketing",
+      "Content Creation"
+    ]
+  }
+]
