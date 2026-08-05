@@ -961,20 +961,15 @@ while((match = regex.exec(html)) !== null){
 if(match[1].toLowerCase().includes("?")){
 questions.push(match[1]);
 }
-
 }
-
 return questions.slice(0,4);
 }
 
 /* BUILD POSTS */
-
 for(const post of posts){
-
 fs.mkdirSync(`_site/posts/${post.slug}`,{recursive:true});
 
 /* SAFE RECOMMENDATION ENGINE */
-
 const { tocHtml, updatedHtml } = generateToC(post.html);
 
 const relatedPosts = posts
@@ -998,7 +993,6 @@ let inlinePosts = posts
 .slice(0,3);
 
 /* HARD fallback — guarantees links always render */
-
 if(inlinePosts.length < 3){
 inlinePosts = posts
 .filter(p=>p.slug!==post.slug)
@@ -1023,7 +1017,6 @@ const categoryTitle = formatCategoryTitle(category);
 
 const breadcrumbHTML = `
 `;
-  
 const breadcrumbSchema = `
 <script type="application/ld+json">
 {
@@ -1060,7 +1053,6 @@ const breadcrumbSchema = `
 `;
 
 /* TOPIC CLUSTER BLOCK */
-
 const clusterPosts = topics[post.category]
   .filter(p=>p.slug!==post.slug)
   .slice(0,5);
@@ -1079,7 +1071,6 @@ ${clusterPosts.map(p=>`
 const page = `<!doctype html>
 <html lang="en">
 <head>
-
 <meta charset="utf-8">
 <link rel="preconnect" href="https://img.youtube.com">
 <link rel="preconnect" href="https://i.ytimg.com">
@@ -1088,13 +1079,9 @@ const page = `<!doctype html>
 <meta name="google-site-verification" content="JVwKXzn2GLXsQvxWNM1oDIehqkxZ_oa0I3kddnLnY1A" />
 <meta name="msvalidate.01" content="EFCFE264BAC6BD46CDE25837ADBBBEEC" />
 <meta name="robots" content="index, follow">
-
 <title>${post.title}</title>
-
 <link rel="canonical" href="${post.url}">
-
 <link rel="preload" as="image" href="${post.og}">
-
 <link rel="stylesheet" href="${SITE_URL}/assets/styles.css">
 <meta name="description" content="${post.description}">
 <meta property="og:title" content="${post.title}">
@@ -1103,7 +1090,6 @@ const page = `<!doctype html>
 <meta property="og:site_name" content="ReviewLab">
 <meta property="og:url" content="${post.url}">
 <meta property="og:image" content="${post.og}">
-
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="${post.title}">
 <meta name="twitter:description" content="${post.description}">
@@ -1117,18 +1103,14 @@ ${post.schemas}
 ${globalHeader()}
 
 <div class="container">
-
 <div class="page-wrapper">
-
 <div class="main-content post-page">
 
 ${breadcrumbHTML}
 ${breadcrumbSchema}
  
 <article>
-
 <h1 class="overhead">${post.title}</h1>
-
 <div class="top-cta">
   <p><strong>🚀 Want the exact AI tool that’s making people money right now?</strong></p>
   <a href="javascript:void(0)" class="cta-btn">See #1 Tool →</a>
@@ -1137,7 +1119,6 @@ ${breadcrumbSchema}
 <p class="sub">
 By <a href="${SITE_URL}/author/" rel="author">Justin Gerald</a> • ${post.readTime} min read
 </p>
-
 <section class="post-inline-email">
 <p><strong>Want deeper AI tool breakdowns?</strong></p>
 
@@ -1423,7 +1404,6 @@ ${post.isReview ? `
 <a href="javascript:void(0)" class="cta-btn">See Tool →</a>
 </div>
 ` : ""}
-
 </body>
 </html>
 `;
@@ -1432,7 +1412,6 @@ fs.writeFileSync(`_site/posts/${post.slug}/index.html`,page);
 }
 
 function copyStaticPage(slug, filePath){
-
 if(!fs.existsSync(filePath)){
 console.log(`⚠ Skipping missing file: ${filePath}`);
 return;
@@ -1559,9 +1538,7 @@ No paid placements. No inflated rankings.
 `);
 
 /* BUILD CATEGORY (AI TOOLS) PAGES — RUN ONCE */
-
 for (const topic in topics) {
-
   const list = topics[topic]
     .map(p => `<li><a href="${p.url}">${p.title}</a></li>`)
     .join("");
@@ -1583,10 +1560,8 @@ for (const topic in topics) {
 <link rel="stylesheet" href="${SITE_URL}/assets/styles.css">
 <meta name="description" content="Expert reviews and comparisons for ${topicTitle}.">
 </head>
-
 <body>
 ${globalHeader()}
-
 <div class="container">
 
 <h1>${topicTitle}</h1>
@@ -1617,9 +1592,7 @@ ${topics[topic]
 <ul class="clean-list">
 ${list}
 </ul>
-
 </div>
-
 </body>
 </html>
 `;
@@ -1637,29 +1610,22 @@ generateSitemapIndex();
 /* =========================
    TAG TAXONOMY ENGINE
 ========================= */
-
 const tags = {};
 
 posts.forEach(post=>{
-
 const words = post.title.toLowerCase().split(/\W+/);
 
 words.forEach(word=>{
-
 if(word.length < 5) return;
 
 if(!tags[word]) tags[word]=[];
 
 tags[word].push(post);
-
 });
-
 });
 
 /* Build tag pages */
-
 for(const tag in tags){
-
 if(tags[tag].length < 2) continue;
 
 const list = tags[tag]
@@ -1695,7 +1661,6 @@ ${list}
 }
 
 /* FULL AUTHORITY AUTHOR PAGE RESTORED */
-
 const authorPosts = posts.map(p=>`
 <li class="post-card">
   <a href="${p.url}" class="post-link">
@@ -1709,8 +1674,8 @@ const authorPosts = posts.map(p=>`
 `).join("");
 
 fs.mkdirSync(`_site/author`,{recursive:true});
- 
 fs.writeFileSync(`_site/author/index.html`,`
+
 <!doctype html>
 <html>
 <head>
@@ -1747,7 +1712,6 @@ fs.writeFileSync(`_site/author/index.html`,`
 }
 
 </script>
-
 </head>
 <body>
 ${globalHeader()}
@@ -1813,22 +1777,17 @@ Sitemap: ${SITE_URL}/sitemap.xml
 `);
 
 fs.copyFileSync("assets/styles.css","_site/assets/styles.css");
-
 fs.copyFileSync("assets/og-default.jpg","_site/assets/og-default.jpg");
 fs.copyFileSync("assets/og-cta-tested.jpg","_site/assets/og-cta-tested.jpg");
-
 fs.copyFileSync("assets/email.js","_site/assets/email.js");
 
 /* =========================
    HOMEPAGE + PAGINATION
 ========================= */
-
 for(let page=1; page<=totalPages; page++){
-
 const start = (page-1)*POSTS_PER_PAGE;
 const end = start+POSTS_PER_PAGE;
 const pagePosts = posts.slice(start,end);
-
 const homepagePosts = pagePosts.map(post => `
 <li class="post-card" data-category="${post.category}">
   <a href="${post.url}" class="post-link">
@@ -1906,7 +1865,6 @@ ${pagePosts.map((post,i)=>`
 <body class="homepage-bg homepage-root">
 ${globalHeader()}
 <div class="container home-hero">
-
 <div class="search-filter-bar">
 
 <input type="text" id="searchInput" placeholder="Search reviews..." class="search-input">
@@ -2022,10 +1980,9 @@ lazyImgs.forEach(img=>io.observe(img));
 `;
 
 fs.copyFileSync("assets/hero-bg.webp","_site/assets/hero-bg.webp");
-  
 fs.mkdirSync(`_site/search`,{recursive:true});
-
 fs.writeFileSync(`_site/search/index.html`,`
+
 <!doctype html>
 <html>
 <head>
@@ -2041,11 +1998,8 @@ ${globalHeader()}
 <div class="container">
 
 <h1>Search Reviews</h1>
-
 <input type="text" id="searchBox" class="search-input" placeholder="Search..." class="search">
-
 <ul id="results" class="post-list"></ul>
-
 </div>
 
 <script>
@@ -2072,7 +2026,6 @@ results.innerHTML+=\`<li><a href="\${p.url}" class="post-title">\${p.title}</a><
 });
 });
 </script>
-
 </body>
 </html>
 `);
@@ -2084,7 +2037,6 @@ const outputPath = page===1
 if(page!==1){
 fs.mkdirSync(`_site/page/${page}`,{recursive:true});
 }
-
 fs.writeFileSync(outputPath, homepage);
 }
 
@@ -2092,7 +2044,6 @@ fs.mkdirSync("_site/admin", { recursive: true });
 fs.copyFileSync("admin/index.html", "_site/admin/index.html");
 
 console.log("✅ Verification: Files in _site/posts/ are:", fs.readdirSync("_site/posts"));
-
 console.log("✅ Homepage + Pagination Built Successfully");
 
 /* AUTOMATIC CACHE PURGE */
