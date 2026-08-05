@@ -744,14 +744,88 @@ ${urls}
 </urlset>`);
 }
 
+/* =========================
+   COMPARISON SITEMAP
+========================= */
+function generateComparisonSitemap(){
+
+const urls = [];
+
+if(fs.existsSync("_site/comparisons")){
+const folders = fs.readdirSync("_site/comparisons");
+
+folders.forEach(folder=>{
+if(folder==="index.html") return;
+
+urls.push(`
+<url>
+<loc>${SITE_URL}/comparisons/${folder}/</loc>
+<changefreq>weekly</changefreq>
+<priority>0.8</priority>
+</url>
+`);
+});
+}
+
+fs.writeFileSync("_site/sitemap-comparisons.xml",
+`<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${urls.join("")}
+</urlset>`
+);
+}
+
+/* =========================
+   TAG SITEMAP
+========================= */
+function generateTagSitemap(){
+
+const urls = [];
+
+if(fs.existsSync("_site/tag")){
+const folders = fs.readdirSync("_site/tag");
+
+folders.forEach(tag=>{
+urls.push(`
+<url>
+<loc>${SITE_URL}/tag/${tag}/</loc>
+<changefreq>monthly</changefreq>
+<priority>0.4</priority>
+</url>
+`);
+});
+}
+  
+fs.writeFileSync("_site/sitemap-tags.xml",
+`<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+
+${urls.join("")}
+</urlset>`
+);
+}
+
 function generateSitemapIndex(){
 fs.writeFileSync("_site/sitemap.xml",
 `<?xml version="1.0" encoding="UTF-8"?>
 <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-<sitemap><loc>${SITE_URL}/sitemap-posts.xml</loc></sitemap>
-<sitemap><loc>${SITE_URL}/sitemap-pages.xml</loc></sitemap>
-<sitemap><loc>${SITE_URL}/sitemap-categories.xml</loc></sitemap>
-</sitemapindex>`);
+<sitemap>
+<loc>${SITE_URL}/sitemap-posts.xml</loc>
+</sitemap>
+<sitemap>
+<loc>${SITE_URL}/sitemap-pages.xml</loc>
+</sitemap>
+<sitemap>
+<loc>${SITE_URL}/sitemap-categories.xml</loc>
+</sitemap>
+<sitemap>
+<loc>${SITE_URL}/sitemap-comparisons.xml</loc>
+</sitemap>
+<sitemap>
+<loc>${SITE_URL}/sitemap-tags.xml</loc>
+</sitemap>
+</sitemapindex>`
+);
 }
 
  /* =========================
@@ -1704,7 +1778,9 @@ ${list}
 generatePostSitemap(posts);
 generatePageSitemap();
 generateCategorySitemap(topics);
-generateSitemapIndex(); 
+generateComparisonSitemap();
+generateTagSitemap();
+generateSitemapIndex();
 
 /* =========================
    TAG TAXONOMY ENGINE
