@@ -115,7 +115,6 @@ const DEFAULT = `${SITE_URL}/assets/og-default.jpg`;
 const LOCAL_DEFAULT_PATH = "_site/assets/og-default.jpg";
 
 /* CLEAN FULL BUILD */
-
 fs.rmSync("_site", { recursive: true, force: true });
 fs.mkdirSync("_site", { recursive: true });
 
@@ -499,9 +498,7 @@ function detectTopic(title, html) {
       highest = score;
       best = category;
     }
-
   }
-
   return best;
 }
 
@@ -983,6 +980,55 @@ fs.writeFileSync("_site/rss.xml",rss);
 
 generateRSS(posts);
 
+function calculateComparisonScore(productA, productB){
+
+let score = 0;
+
+if(!productA || !productB)
+return score;
+
+/* Same category */
+if(productA.category === productB.category)
+score += 50;
+
+/* Same developer */
+if(
+productA.developer &&
+productB.developer &&
+productA.developer === productB.developer
+){
+score += 30;
+}
+
+/* Same pricing */
+if(
+productA.pricingModel &&
+productB.pricingModel &&
+productA.pricingModel === productB.pricingModel
+){
+score += 15;
+}
+
+/* Same audience */
+const bestForA = productA.bestFor || [];
+const bestForB = productB.bestFor || [];
+
+bestForA.forEach(item=>{
+if(bestForB.includes(item)){
+score += 12;
+}
+});
+
+/* Similar ratings */
+if(productA.rating && productB.rating){
+const diff = Math.abs(productA.rating-productB.rating);
+
+if(diff<=0.5)
+score += 10;
+}
+return score;
+}
+
 /* AUTO COMPARISON ENGINE - UPDATED */
 function generateComparison(postA, postB) {
   const slug = `${postA.slug}-vs-${postB.slug}`;
@@ -1089,14 +1135,31 @@ const comparisonPairs = new Set();
 /* BUILD ALL COMPARISON PAGES */
 posts.forEach((postA, i) => {
   const related = posts
-    .filter(p =>
-      p.slug !== postA.slug &&
-      p.category === postA.category
-    )
-    .slice(0,3);
+
+.filter(p=>{
+return (
+p.slug !== postA.slug &&
+p.isReview &&
+postA.isReview
+);
+})
+
+.map(p=>({
+post:p,
+
+score:calculateComparisonScore(
+postA.product,
+p.product
+)
+}))
+
+.sort((a,b)=>b.score-a.score)
+
+.slice(0,3)
+
+.map(x=>x.post);
   
   related.forEach(postB => {
-
     const sorted = [postA.slug, postB.slug].sort();
     const pairKey = sorted.join("::");
 
