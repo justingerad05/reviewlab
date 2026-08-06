@@ -67,6 +67,11 @@ function safeLower(value){
   return safeString(value).toLowerCase();
 }
 
+function normalizeText(str = ""){
+  return safeLower(str)
+    .replace(/[^a-z0-9]/g,"");
+}
+
 function safeArray(value){
   if(Array.isArray(value)){
     return value;
@@ -395,13 +400,17 @@ function getProductData(title, content=""){
 const searchText = safeLower(`${title} ${content}`);
 const product = products.find(product => {
 const productName = safeLower(product?.name);
-const productSlug = safeLower(product?.slug)
-.replace(/-/g," ");
-return (
-(productName && searchText.includes(productName))
-||
-(productSlug && searchText.includes(productSlug))
-);
+const productSlug = safeLower(product?.slug);
+
+const variations = [
+    productName,
+    productSlug,
+    productSlug.replace(/-/g, " "),
+    productSlug.replace(/-/g, ""),
+    productName.replace(/\s+/g, ""),
+    productName.replace(/\s+/g, "-")
+].filter(Boolean);
+return variations.some(v => searchText.includes(v));
 });
 if(!product) return null;
 return {
@@ -429,11 +438,60 @@ function detectTopic(title, html) {
   
   // Added "ai-voice-tools" keywords to fix your specific post issue
   const weights = {
-    "ai-writing-tools": ["writer","copy","blog","content","text","article"],
-    "ai-image-generators": ["image","art","design","logo","photo","midjourney"],
-    "ai-voice-tools": ["voice","speech","audio","podcast","narration","tts","elevenlabs"],
-    "automation-tools": ["automation","workflow","integration","zapier"]
-  };
+
+"ai-writing-tools":[
+"writer",
+"writing",
+"copy",
+"copywriting",
+"blog",
+"content",
+"article",
+"seo",
+"chatgpt",
+"claude",
+"jasper"
+],
+
+"ai-image-generators":[
+"image",
+"images",
+"art",
+"logo",
+"photo",
+"midjourney",
+"flux",
+"stable diffusion",
+"dalle",
+"design"
+],
+
+"ai-voice-tools":[
+"voice",
+"speech",
+"audio",
+"tts",
+"text to speech",
+"voiceover",
+"voice clone",
+"voice cloning",
+"elevenlabs",
+"soundsoreal",
+"podcast"
+],
+
+"automation-tools":[
+"automation",
+"workflow",
+"zapier",
+"make",
+"n8n",
+"integration",
+"agent",
+"agents",
+"ai agent"
+]
+};
 
   let bestCategory = "ai-writing-tools"; // Default fallback
   let highestScore = -1;
