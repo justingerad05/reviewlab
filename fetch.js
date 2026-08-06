@@ -396,23 +396,27 @@ const seenSlugs = new Set();
 
 const posts=[];
 
-function getProductData(title, content=""){
-const searchText = safeLower(`${title} ${content}`);
+function getProductData(title, content = "") {
+const searchText = `${title} ${content}`;
+const normalizedSearch = normalizeText(searchText);
 const product = products.find(product => {
 const productName = safeLower(product?.name);
 const productSlug = safeLower(product?.slug);
 
 const variations = [
-    productName,
-    productSlug,
-    productSlug.replace(/-/g, " "),
-    productSlug.replace(/-/g, ""),
-    productName.replace(/\s+/g, ""),
-    productName.replace(/\s+/g, "-")
-].filter(Boolean);
-return variations.some(v => searchText.includes(v));
+productName,
+productSlug,
+productSlug.replace(/-/g, " "),
+productSlug.replace(/-/g, ""),
+productName.replace(/\s+/g, ""),
+productName.replace(/\s+/g, "-")
+]
+.filter(Boolean)
+.map(normalizeText);
+return variations.some(v => normalizedSearch.includes(v));
 });
 if(!product) return null;
+
 return {
 slug: product.slug || "",
 name: product.name || "",
@@ -578,7 +582,7 @@ const {pros,cons} = extractProsCons(textOnly);
 
 /* SCHEMA */
 const wordCount = textOnly.split(/\s+/).length;
-const productMatch = getProductData(title, textOnly);
+const productMatch = getProductData(title, rawHtml);
 const productInfo = productMatch || {};
 
 // AI Choice Selection based on Title inspection
