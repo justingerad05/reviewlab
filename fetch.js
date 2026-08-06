@@ -391,28 +391,19 @@ const seenSlugs = new Set();
 
 const posts=[];
 
-function getProductData(title){
-const lowerTitle = safeLower(title);
-
+function getProductData(title, content=""){
+const searchText = safeLower(`${title} ${content}`);
 const product = products.find(product => {
 const productName = safeLower(product?.name);
-
 const productSlug = safeLower(product?.slug)
 .replace(/-/g," ");
-
 return (
-productName &&
-text.includes(productName)
-)
+(productName && searchText.includes(productName))
 ||
-(
-productSlug &&
-text.includes(productSlug)
+(productSlug && searchText.includes(productSlug))
 );
 });
-
 if(!product) return null;
-
 return {
 slug: product.slug || "",
 name: product.name || "",
@@ -529,7 +520,7 @@ const {pros,cons} = extractProsCons(textOnly);
 
 /* SCHEMA */
 const wordCount = textOnly.split(/\s+/).length;
-const productMatch = getProductData(title);
+const productMatch = getProductData(title, textOnly);
 const productInfo = productMatch || {};
 
 // AI Choice Selection based on Title inspection
