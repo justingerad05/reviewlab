@@ -44,7 +44,6 @@ function sanitizeHTML(html = "") {
 
 function getText(field) {
   if (!field) return "";
-
   if (typeof field === "string") {
     return field;
   }
@@ -104,7 +103,6 @@ return `
 <a href="${SITE_URL}/about/">About</a>
 <a href="${SITE_URL}/contact/">Contact</a>
 </nav>
-
 </div>
 </header>
 `;
@@ -143,17 +141,13 @@ let xml = "";
 try {
   const CACHE_BUSTER = `&t=${Date.now()}`;
   console.log("Fetching fresh feed...");
-
   const res = await fetch(FEED_URL + CACHE_BUSTER);
-
   console.log("Feed status:", res.status);
 
   if (!res.ok) {
     throw new Error(`Blogger Feed returned status ${res.status}`);
   }
-
   xml = await res.text();
-
 } catch (err) {
   console.error("FAILED TO FETCH BLOGGER POSTS:");
   console.error("Error Message:", err.message);
@@ -167,7 +161,6 @@ if (!data.feed || !data.feed.entry) {
   console.error("❌ No entries found in the feed. Check if the Blogger URL is correct.");
   process.exit(1);
 }
-
 let entries = data.feed.entry;
 if(!Array.isArray(entries)) entries=[entries];
 
@@ -175,7 +168,6 @@ console.log("TOTAL ENTRIES FROM FEED:", entries.length);
 
 /* YOUTUBE IMAGE ENGINE + BLOGGER FALLBACK (STRICT ARCHITECTURE) */
 async function getYouTubeImages(html, slug) {
-  
   // 1. SEARCH FOR YOUTUBE VIDEO (PRIORITY)
   const match = html.match(/(?:youtube\.com\/(?:embed\/|watch\?v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
 
@@ -186,7 +178,6 @@ async function getYouTubeImages(html, slug) {
       `https://img.youtube.com/vi/${id}/sddefault.jpg`,
       `https://img.youtube.com/vi/${id}/hqdefault.jpg`
     ];
-
     let success = false;
     for (const imgUrl of candidates) {
       success = await upscaleToOG(imgUrl, slug);
@@ -209,11 +200,9 @@ async function getYouTubeImages(html, slug) {
       return [`${SITE_URL}/og-images/${slug}.webp` ];
     }
   }
-
   // 3. FINAL FALLBACK: STABLE BRANDED ASSET
   return [`${SITE_URL}/assets/og-default.jpg`];
 }
-
 /* SEMANTIC INTERNAL LINK GRAPH */
 function scoreSimilarity(a,b){
 const aw = a.toLowerCase().split(/\W+/);
@@ -251,7 +240,6 @@ function generateRelatedReviews(currentPost, allPosts){
 const related = allPosts
 .filter(post => post.slug !== currentPost.slug)
 .map(post=>{
-
 let score = 0;
 
 // Same category gets biggest boost
@@ -356,16 +344,8 @@ function calculateReviewScore({
   }
   // 4. REVIEW INTENT SCORE
   const reviewWords = [
-    "review",
-    "tested",
-    "results",
-    "comparison",
-    "verdict",
-    "worth",
-    "rating"
-  ];
+    "review", "tested", "results", "comparison", "verdict", "worth", "rating"];
   const lower = title.toLowerCase();
-
   const foundSignals = reviewWords.filter(word =>
     lower.includes(word)
   );
@@ -390,7 +370,6 @@ function calculateReviewScore({
     breakdown
   };
 }
-
 const seenSlugs = new Set();
 
 const posts=[];
@@ -436,7 +415,6 @@ bestFor: product.bestFor || []
 }
 
 function detectTopic(title, html) {
-
   // 1. First try the products database
   const product = getProductData(title, html);
 
@@ -446,9 +424,7 @@ function detectTopic(title, html) {
 
   // 2. Fallback to keyword detection
   const content = safeLower(`${title} ${html}`);
-
   const weights = {
-
     "ai-writing-tools": [
       "writer","writing","copy","copywriting","blog",
       "content","article","seo","chatgpt","claude","jasper"
@@ -460,38 +436,26 @@ function detectTopic(title, html) {
     ],
 
     "ai-voice-tools": [
-      "voice","speech","audio","tts",
-      "voice clone","voice cloning",
-      "text to speech",
-      "elevenlabs",
-      "soundsoreal",
-      "podcast"
-    ],
+      "voice","speech","audio","tts","voice clone","voice cloning",
+      "text to speech","elevenlabs","soundsoreal","podcast"],
 
     "automation-tools": [
-      "automation","workflow","zapier",
-      "make","n8n","integration",
-      "agent","agents","ai agent"
-    ]
-
+      "automation","workflow","zapier","make","n8n","integration",
+      "agent","agents","ai agent"]
   };
 
   let best = "ai-writing-tools";
   let highest = 0;
 
   for (const [category, words] of Object.entries(weights)) {
-
     let score = 0;
 
     words.forEach(word => {
-
       const regex = new RegExp(
         word.replace(/\s+/g,"\\s+"),
         "gi"
       );
-
       score += (content.match(regex) || []).length;
-
     });
 
     if(score > highest){
@@ -551,7 +515,6 @@ let counter = 1;
 while(seenSlugs.has(slug)){
   slug = `${baseSlug}-${counter++}`;
 }
-
 seenSlugs.add(slug);
 const url = `${SITE_URL}/posts/${slug}/`;
 const textOnly = rawHtml.replace(/<[^>]+>/g," ");
@@ -563,7 +526,6 @@ const primaryOG = ogImages[0];
 const readTime = Math.max(1,
 Math.ceil(textOnly.split(/\s+/).length / 200)
 );
-
 const {pros,cons} = extractProsCons(textOnly);
 
 /* SCHEMA */
@@ -744,7 +706,6 @@ function generateToC(html) {
 function generateTrustBlock(post){
 return `
 <section class="trust-review-box">
-
 <h2>Why You Can Trust This Review</h2>
 
 <ul class="trust-list">
@@ -776,22 +737,18 @@ return `
 ⭐ Rating: ${p.rating || "N/A"}/5
 </div>
 <div class="product-details">
-
 <p>
 <strong>Category:</strong>
 ${p.category || "AI Tool"}
 </p>
-
 <p>
 <strong>Pricing:</strong>
 ${p.price || "Check latest pricing"}
 </p>
-
 <p>
 <strong>Best For:</strong>
 ${(p.bestFor || []).join(", ")}
 </p>
-
 </div>
 <div class="product-columns">
 <div>
@@ -872,7 +829,6 @@ ${urls}
    COMPARISON SITEMAP
 ========================= */
 function generateComparisonSitemap(){
-
 const urls = [];
 
 if(fs.existsSync("_site/comparisons")){
@@ -903,7 +859,6 @@ ${urls.join("")}
    TAG SITEMAP
 ========================= */
 function generateTagSitemap(){
-
 const urls = [];
 
 if(fs.existsSync("_site/tag")){
@@ -923,7 +878,6 @@ urls.push(`
 fs.writeFileSync("_site/sitemap-tags.xml",
 `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-
 ${urls.join("")}
 </urlset>`
 );
@@ -981,7 +935,6 @@ fs.writeFileSync("_site/rss.xml",rss);
 generateRSS(posts);
 
 function calculateComparisonScore(productA, productB){
-
 let score = 0;
 
 if(!productA || !productB)
@@ -1143,30 +1096,21 @@ p.isReview &&
 postA.isReview
 );
 })
-
 .map(p=>({
 post:p,
-
 score:calculateComparisonScore(
 postA.product,
 p.product
 )
 }))
-
 .sort((a,b)=>b.score-a.score)
-
 .slice(0,3)
-
 .map(x=>x.post);
-  
   related.forEach(postB => {
     const sorted = [postA.slug, postB.slug].sort();
     const pairKey = sorted.join("::");
-
     if(comparisonPairs.has(pairKey)) return;
-
     comparisonPairs.add(pairKey);
-
     const slug =
       `${sorted[0]}-vs-${sorted[1]}`;
 
@@ -1174,7 +1118,6 @@ p.product
     if(!generatedComparisons.has(postA.slug)){
       generatedComparisons.set(postA.slug, []);
     }
-
     generatedComparisons.get(postA.slug).push({
       slug,
       title: `${postA.title} vs ${postB.title}`
@@ -1184,16 +1127,13 @@ p.product
     if(!generatedComparisons.has(postB.slug)){
       generatedComparisons.set(postB.slug, []);
     }
-
     generatedComparisons.get(postB.slug).push({
       slug,
       title: `${postB.title} vs ${postA.title}`
     });
-
     generateComparison(postA, postB);
   });
 });
-
 const comparisonLinks = [];
 
 for(let i=0;i<posts.length;i++){
@@ -1320,7 +1260,6 @@ const regex = /<h2>(.*?)<\/h2>/g;
 let match;
 
 while((match = regex.exec(html)) !== null){
-
 if(match[1].toLowerCase().includes("?")){
 questions.push(match[1]);
 }
@@ -1334,9 +1273,7 @@ fs.mkdirSync(`_site/posts/${post.slug}`,{recursive:true});
 
 /* SAFE RECOMMENDATION ENGINE */
 const { tocHtml, updatedHtml } = generateToC(post.html);
-
 const relatedPosts = generateRelatedReviews(post, posts).slice(0,4);
-
 let inlinePosts = generateRelatedReviews(post, posts)
 .filter(p=>!relatedPosts.some(r=>r.slug===p.slug))
 .slice(0,3);
@@ -1523,7 +1460,6 @@ height="360">
 <section class="decision-cta">
   <h3>So… is this tool actually worth it?</h3>
   <p>If you want something that delivers real results, this is the one most people switch to.</p>
-
   <a href="javascript:void(0)" class="cta-btn">View Best Alternative →</a>
 </section>
   
@@ -1564,13 +1500,9 @@ View #1 Recommendation →
 <ul class="post-list">
 ${related}
 </ul>
-
 <img id="hoverPreview" class="hover-preview"/>
-
 </article>
-
 </div>
-
 <aside class="sidebar">
 
 <!-- 1. PRIMARY MONEY CTA (Sticky + Dynamic) -->
@@ -1622,14 +1554,10 @@ ${related}
     <li><a href="/ai-tools/automation-tools/">Automation</a></li>
   </ul>
 </div>
-
 </aside>
-
 </div>
 </div>
-
 <footer class="site-footer">
-
 <div class="footer-links">
 <a href="${SITE_URL}/">Home</a>
 <a href="${SITE_URL}/about/">About</a>
@@ -1642,16 +1570,11 @@ ${related}
 <p class="footer-copy">
 © ${new Date().getFullYear()} ReviewLab. Independent AI software analysis.
 </p>
-
 </footer>
-
 <script src="/assets/email.js"></script>
-
 <script>
 document.addEventListener("DOMContentLoaded",()=>{
-
 const lazyImgs=document.querySelectorAll(".lazy");
-
 const io=new IntersectionObserver(entries=>{
 entries.forEach(e=>{
 if(e.isIntersecting){
@@ -1662,13 +1585,9 @@ io.unobserve(img);
 }
 });
 });
-
 lazyImgs.forEach(img=>io.observe(img));
-
 const hover=document.getElementById("hoverPreview");
-
 document.querySelectorAll(".related-link").forEach(link=>{
-
 const img=link.querySelector("img");
 let touchTimer;
 
