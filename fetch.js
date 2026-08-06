@@ -44,9 +44,37 @@ function sanitizeHTML(html = "") {
 
 function getText(field) {
   if (!field) return "";
-  if (typeof field === "string") return field;
-  if (field["#text"]) return field["#text"];
+
+  if (typeof field === "string") {
+    return field;
+  }
+
+  if (field["#text"]) {
+    return field["#text"];
+  }
   return "";
+}
+
+/* GLOBAL BUILD SAFETY HELPERS */
+function safeString(value){
+  if(value === null || value === undefined){
+    return "";
+  }
+  return String(value);
+}
+
+function safeLower(value){
+  return safeString(value).toLowerCase();
+}
+
+function safeArray(value){
+  if(Array.isArray(value)){
+    return value;
+  }
+  if(value){
+    return [value];
+  }
+  return [];
 }
 
 const FEED_URL =
@@ -364,13 +392,24 @@ const seenSlugs = new Set();
 const posts=[];
 
 function getProductData(title){
+const lowerTitle = safeLower(title);
 
-const text = title.toLowerCase();
+const product = products.find(product => {
+const productName = safeLower(product?.name);
 
-const product = products.find(product =>
-text.includes(product.name.toLowerCase()) ||
-text.includes(product.slug.replace(/-/g," "))
+const productSlug = safeLower(product?.slug)
+.replace(/-/g," ");
+
+return (
+productName &&
+text.includes(productName)
+)
+||
+(
+productSlug &&
+text.includes(productSlug)
 );
+});
 
 if(!product) return null;
 
@@ -452,14 +491,12 @@ rawHtml = rawHtml.replace(
 /* SAFE LABEL EXTRACTION */
 let labels = [];
 
-if (entry.category) {
-  const cats = Array.isArray(entry.category)
-    ? entry.category
-    : [entry.category];
+const categories = safeArray(entry.category);
 
-  labels = cats.map(c => (c.term || "").toLowerCase());
-}
-
+labels = categories
+.map(c => safeLower(c?.term))
+.filter(Boolean);
+  
 /* NEW AI-DRIVEN CATEGORY ENGINE */
 let category = detectTopic(title, rawHtml); 
 
@@ -479,7 +516,8 @@ while(seenSlugs.has(slug)){
 seenSlugs.add(slug);
 const url = `${SITE_URL}/posts/${slug}/`;
 const textOnly = rawHtml.replace(/<[^>]+>/g," ");
-const description = textOnly.slice(0,155);
+const description = safeString(textOnly)
+.slice(0,155);
 const ogImages = await getYouTubeImages(rawHtml,slug);
 const primaryOG = ogImages[0];
 
