@@ -437,83 +437,72 @@ bestFor: product.bestFor || []
 }
 
 function detectTopic(title, html) {
-  if (!title && !html) return "ai-writing-tools"; // Absolute safety fallback
-  const content = (title + " " + html).toLowerCase();
-  
-  // Added "ai-voice-tools" keywords to fix your specific post issue
+
+  // 1. First try the products database
+  const product = getProductData(title, html);
+
+  if (product?.category) {
+    return product.category;
+  }
+
+  // 2. Fallback to keyword detection
+  const content = safeLower(`${title} ${html}`);
+
   const weights = {
 
-"ai-writing-tools":[
-"writer",
-"writing",
-"copy",
-"copywriting",
-"blog",
-"content",
-"article",
-"seo",
-"chatgpt",
-"claude",
-"jasper"
-],
+    "ai-writing-tools": [
+      "writer","writing","copy","copywriting","blog",
+      "content","article","seo","chatgpt","claude","jasper"
+    ],
 
-"ai-image-generators":[
-"image",
-"images",
-"art",
-"logo",
-"photo",
-"midjourney",
-"flux",
-"stable diffusion",
-"dalle",
-"design"
-],
+    "ai-image-generators": [
+      "image","images","art","logo","photo",
+      "midjourney","flux","stable diffusion","dalle","design"
+    ],
 
-"ai-voice-tools":[
-"voice",
-"speech",
-"audio",
-"tts",
-"text to speech",
-"voiceover",
-"voice clone",
-"voice cloning",
-"elevenlabs",
-"soundsoreal",
-"podcast"
-],
+    "ai-voice-tools": [
+      "voice","speech","audio","tts",
+      "voice clone","voice cloning",
+      "text to speech",
+      "elevenlabs",
+      "soundsoreal",
+      "podcast"
+    ],
 
-"automation-tools":[
-"automation",
-"workflow",
-"zapier",
-"make",
-"n8n",
-"integration",
-"agent",
-"agents",
-"ai agent"
-]
-};
+    "automation-tools": [
+      "automation","workflow","zapier",
+      "make","n8n","integration",
+      "agent","agents","ai agent"
+    ]
 
-  let bestCategory = "ai-writing-tools"; // Default fallback
-  let highestScore = -1;
+  };
 
-  for (const [category, keywords] of Object.entries(weights)) {
+  let best = "ai-writing-tools";
+  let highest = 0;
+
+  for (const [category, words] of Object.entries(weights)) {
+
     let score = 0;
-    keywords.forEach(word => {
-      // Count how many times each keyword appears
-      const count = (content.match(new RegExp("\\b" + word + "\\b", "g")) || []).length;
-      score += count;
+
+    words.forEach(word => {
+
+      const regex = new RegExp(
+        word.replace(/\s+/g,"\\s+"),
+        "gi"
+      );
+
+      score += (content.match(regex) || []).length;
+
     });
 
-    if (score > highestScore) {
-      highestScore = score;
-      bestCategory = category;
+    if(score > highest){
+      highest = score;
+      best = category;
     }
+
   }
-  return bestCategory;
+
+  return best;
 }
 
 /* BUILD DATA (Reinforced) */
