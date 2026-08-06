@@ -830,13 +830,10 @@ ${urls}
 ========================= */
 function generateComparisonSitemap(){
 const urls = [];
-
 if(fs.existsSync("_site/comparisons")){
 const folders = fs.readdirSync("_site/comparisons");
-
 folders.forEach(folder=>{
 if(folder==="index.html") return;
-
 urls.push(`
 <url>
 <loc>${SITE_URL}/comparisons/${folder}/</loc>
@@ -846,7 +843,6 @@ urls.push(`
 `);
 });
 }
-
 fs.writeFileSync("_site/sitemap-comparisons.xml",
 `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
@@ -860,10 +856,8 @@ ${urls.join("")}
 ========================= */
 function generateTagSitemap(){
 const urls = [];
-
 if(fs.existsSync("_site/tag")){
 const folders = fs.readdirSync("_site/tag");
-
 folders.forEach(tag=>{
 urls.push(`
 <url>
@@ -874,7 +868,6 @@ urls.push(`
 `);
 });
 }
-  
 fs.writeFileSync("_site/sitemap-tags.xml",
 `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
@@ -928,15 +921,12 @@ ${posts.slice(0,20).map(post=>`
 `).join("")}
 </channel>
 </rss>`;
-
 fs.writeFileSync("_site/rss.xml",rss);
 }
-
 generateRSS(posts);
 
 function calculateComparisonScore(productA, productB){
 let score = 0;
-
 if(!productA || !productB)
 return score;
 
@@ -965,7 +955,6 @@ score += 15;
 /* Same audience */
 const bestForA = productA.bestFor || [];
 const bestForB = productB.bestFor || [];
-
 bestForA.forEach(item=>{
 if(bestForB.includes(item)){
 score += 12;
@@ -975,7 +964,6 @@ score += 12;
 /* Similar ratings */
 if(productA.rating && productB.rating){
 const diff = Math.abs(productA.rating-productB.rating);
-
 if(diff<=0.5)
 score += 10;
 }
@@ -1008,7 +996,6 @@ function generateComparison(postA, postB) {
       }
     ]
   };
-
   const html = `
 <!doctype html>
 <html lang="en">
@@ -1029,9 +1016,7 @@ ${globalHeader()}
     <nav class="breadcrumb">
       <a href="${SITE_URL}/">Home</a> » <a href="${SITE_URL}/comparisons/">Comparisons</a> » ${postA.title} vs ${postB.title}
     </nav>
-
     <h1>${postA.title} <span class="vs-text">vs</span> ${postB.title}</h1>
-    
     <div class="comparison-table-wrapper">
       <table class="comparison-table">
         <thead>
@@ -1060,7 +1045,6 @@ ${globalHeader()}
         </tbody>
       </table>
     </div>
-
     <section class="verdict-box">
         <h2>The Verdict</h2>
         <p>After testing both tools, <strong>${postA.title}</strong> excels in specialized output, while <strong>${postB.title}</strong> offers superior workflow automation. Choose based on your primary volume needs.</p>
@@ -1073,7 +1057,6 @@ ${globalHeader()}
 </body>
 </html>
 `;
-
   fs.mkdirSync(`_site/comparisons/${slug}`, { recursive: true });
 
 fs.writeFileSync(
@@ -1081,7 +1064,6 @@ fs.writeFileSync(
   html
 );
 }
-
 const generatedComparisons = new Map();
 const comparisonPairs = new Set();
 
@@ -1122,7 +1104,6 @@ p.product
       slug,
       title: `${postA.title} vs ${postB.title}`
     });
-
     // SAVE FOR B
     if(!generatedComparisons.has(postB.slug)){
       generatedComparisons.set(postB.slug, []);
@@ -1135,14 +1116,12 @@ p.product
   });
 });
 const comparisonLinks = [];
-
 for(let i=0;i<posts.length;i++){
   if (!posts[i].isReview) continue; // Supporting posts completely skip master comparisons lists
   for(let j=i+1;j<posts.length && j<i+4;j++){
     if (!posts[j].isReview) continue; 
     const slugs = [posts[i].slug, posts[j].slug];
     const slug = `${posts[i].slug}-vs-${posts[j].slug}`;
-    
     comparisonLinks.push(`
 <li>
 <a href="${SITE_URL}/comparisons/${slug}/">
@@ -1175,7 +1154,6 @@ ${globalHeader()}
 function generateTopList(category, posts){
   const filtered = posts.filter(p=>p.category===category);
   const top = filtered.slice(0,10);
-
   const list = top.map((p,i)=>`
 <li>
 ${i+1}. <a href="${p.url}">${p.title}</a>
@@ -1199,12 +1177,10 @@ ${i+1}. <a href="${p.url}">${p.title}</a>
 <body>
 ${globalHeader()}
 <div class="container">
-
 <h1>Top 10 ${category.replace(/-/g," ")}</h1>
 <ol class="clean-list">
 ${list}
 </ol>
-
 <div class="author-box">
 <p>
 This category contains ${filtered.length} in-depth reviews focused on performance,
@@ -1215,10 +1191,8 @@ ROI, usability, and competitive analysis.
 </body>
 </html>
 `;
-
   fs.writeFileSync(`${outputDir}/index.html`, html);
 }
-
 generateTopList("ai-writing-tools", posts);
 generateTopList("ai-image-generators", posts);
 generateTopList("automation-tools", posts);
@@ -1228,7 +1202,6 @@ function formatCategoryTitle(slug){
 if(slug==="ai-writing-tools") return "AI Writing Software";
 if(slug==="ai-image-generators") return "AI Image Generation Tools";
 if(slug==="automation-tools") return "AI Automation Software";
-
 return slug.replace(/-/g," ").replace(/\b\w/g,l=>l.toUpperCase());
 }
 
@@ -1239,7 +1212,6 @@ const topics = {
   "ai-voice-tools": [],
   "automation-tools": []
 };
-
 // ✅ NEW: Post Rotator Logic
 // Filter through the title selection pool to only allow reviews into the dynamic CTA targets
 const reviewPool = posts.filter(p => p.isReview);
@@ -1284,11 +1256,9 @@ inlinePosts = posts
 .filter(p=>p.slug!==post.slug)
 .slice(0,3);
 }
-
 const inlineRecs = inlinePosts
 .map(p=>`<li><a href="${p.url}" class="post-title">${p.title}</a></li>`)
 .join("");
-
 const related = relatedPosts
 .map(p=>`
 <li>
@@ -1297,7 +1267,6 @@ const related = relatedPosts
 <span class="related-title">${p.title} (~${p.readTime} min)</span>
 </a>
 </li>`).join("");
-
 const category = post.category || "ai-writing-tools";
 const categoryTitle = formatCategoryTitle(category);
 
@@ -1342,7 +1311,6 @@ const breadcrumbSchema = `
 const clusterPosts = topics[post.category]
   .filter(p=>p.slug!==post.slug)
   .slice(0,5);
-
 const clusterBlock = clusterPosts.length ? `
 <section class="topic-cluster">
 <h3>Explore More ${formatCategoryTitle(post.category)}</h3>
@@ -1353,7 +1321,6 @@ ${clusterPosts.map(p=>`
 </ul>
 </section>
 ` : "";
-  
 const page = `<!doctype html>
 <html lang="en">
 <head>
@@ -1380,60 +1347,47 @@ const page = `<!doctype html>
 <meta name="twitter:title" content="${post.title}">
 <meta name="twitter:description" content="${post.description}">
 <meta name="twitter:image" content="${post.og}">
-
 <script type="application/ld+json">
 ${post.schemas}
 </script>
 </head>
 <body>
 ${globalHeader()}
-
 <div class="container">
 <div class="page-wrapper">
 <div class="main-content post-page">
-
 ${breadcrumbHTML}
 ${breadcrumbSchema}
- 
 <article>
 <h1 class="overhead">${post.title}</h1>
 <div class="top-cta">
   <p><strong>🚀 Want the exact AI tool that’s making people money right now?</strong></p>
   <a href="javascript:void(0)" class="cta-btn">See #1 Tool →</a>
 </div>
-
 <p class="sub">
 By <a href="${SITE_URL}/author/" rel="author">Justin Gerald</a> • ${post.readTime} min read
 </p>
-
 ${post.isReview ? generateTrustBlock(post) : ""}
 ${post.isReview ? generateProductBox(post) : ""}
 
 <section class="post-inline-email">
 <p><strong>Want deeper AI tool breakdowns?</strong></p>
-
 <form class="email-form" data-source="post">
 <input type="email" placeholder="Your email" required>
 <button type="submit">Send Me Future Reviews</button>
 </form>
-
 <p class="trust">No spam. Only tested tools.</p>
 </section>
-
 ${tocHtml} 
 ${updatedHtml.replace(/(<p>.*?<\/p>){2}/, `$&`)}
-
 <section class="mid-cta">
   <p><strong>Most AI tools are hype. This one actually converts.</strong></p>
   <a href="javascript:void(0)" class="cta-btn">See The Proven Tool →</a>
-
   <p class="mid-ctaa">
     Tested for real ROI — not just features.
   </p>
 </section>
-
 ${clusterBlock}
-
 <section class="reader-recommendations">
 <h2>You May Also Like</h2>
 <div class="recommendation-grid">
@@ -1456,13 +1410,11 @@ height="360">
 `).join("")}
 </div>
 </section>
-
 <section class="decision-cta">
   <h3>So… is this tool actually worth it?</h3>
   <p>If you want something that delivers real results, this is the one most people switch to.</p>
   <a href="javascript:void(0)" class="cta-btn">View Best Alternative →</a>
 </section>
-  
 ${post.isReview ? `
 <section class="comparison-block">
 <h3>Compare This Tool</h3>
@@ -1480,14 +1432,12 @@ ${comp.title}
 <a href="javascript:void(0)" class="cta-btn">See Best Tool →</a>
 </section>
 ` : ""}
-
 <section class="internal-widget">
 <h3>Continue Reading</h3>
 <ul class="internal-list">
 ${inlineRecs}
 </ul>
 </section>
-
 <section class="money-cta">
 <h3>Best AI Tool Right Now</h3>
 <p>This tool is currently outperforming others in ROI and usability.</p>
@@ -1566,7 +1516,6 @@ ${related}
 <a href="${SITE_URL}/editorial-policy/">Editorial Policy</a>
 <a href="${SITE_URL}/review-methodology/">Review Methodology</a>
 </div>
-
 <p class="footer-copy">
 © ${new Date().getFullYear()} ReviewLab. Independent AI software analysis.
 </p>
@@ -1590,19 +1539,15 @@ const hover=document.getElementById("hoverPreview");
 document.querySelectorAll(".related-link").forEach(link=>{
 const img=link.querySelector("img");
 let touchTimer;
-
 link.addEventListener("mouseover",()=>{
 hover.src=img.dataset.src;
 hover.style.display="block";
 });
-
 link.addEventListener("mousemove",e=>{
 hover.style.top=(e.pageY+20)+"px";
 hover.style.left=(e.pageX+20)+"px";
 });
-
 link.addEventListener("mouseout",()=>hover.style.display="none");
-
 link.addEventListener("touchstart", e=>{
   hover.src = img.dataset.src;
   hover.classList.add("hover-centered");
@@ -1611,19 +1556,14 @@ link.addEventListener("touchstart", e=>{
     hover.classList.remove("hover-centered");
   },500);
 });
-
 link.addEventListener("touchend",()=>{
 clearTimeout(touchTimer);
 hover.style.display="none";
 hover.classList.remove("hover-centered");
 });
-
 });
-
 });
-
 </script>
-
 <script>
 window.addEventListener("load", function(){
   // 1. Load the real post data from the backend
@@ -1641,7 +1581,6 @@ window.addEventListener("load", function(){
     // We use the modulo (%) to cycle through the 5 posts 
     // so every button on the page points to a DIFFERENT real review.
     const assignedPost = postPool[index % postPool.length];
-    
     btn.setAttribute("href", assignedPost.url);
     
     // Optional: Update button text to be more specific if it's a generic button
@@ -1675,7 +1614,6 @@ window.addEventListener("load", function(){
   document.addEventListener("mouseleave", function(e){
     if(e.clientY > 0 || popupShown) return;
     popupShown = true;
-
     const popup = document.createElement("div");
     popup.className = "exit-popup-overlay";
     popup.innerHTML = \`
@@ -1691,7 +1629,6 @@ window.addEventListener("load", function(){
   });
 });
 </script>
-
 ${post.isReview ? `
 <div class="stroll-main-cta">
 <h3>🚀 Recommended Tool</h3>
@@ -1702,16 +1639,13 @@ ${post.isReview ? `
 </body>
 </html>
 `;
-
 fs.writeFileSync(`_site/posts/${post.slug}/index.html`,page);
 }
-
 function copyStaticPage(slug, filePath){
 if(!fs.existsSync(filePath)){
 console.log(`⚠ Skipping missing file: ${filePath}`);
 return;
 }
-
 let content = fs.readFileSync(filePath,"utf-8");
 
 // Remove frontmatter
@@ -1719,7 +1653,6 @@ content = content.replace(/---[\s\S]*?---/,"").trim();
 
 // Convert markdown to HTML
 const htmlContent = marked.parse(content);
-
 const html = `
 <!doctype html>
 <html>
@@ -1741,11 +1674,9 @@ ${htmlContent}
 </body>
 </html>
 `;
-
 fs.mkdirSync(`_site/${slug}`,{recursive:true});
 fs.writeFileSync(`_site/${slug}/index.html`,html);
 }
-
 copyStaticPage("about","pages/about.md");
 copyStaticPage("contact","pages/contact.md");
 copyStaticPage("privacy","pages/privacy.md");
@@ -1773,18 +1704,14 @@ fs.writeFileSync(`_site/ai-tools/index.html`, `
 <meta name="description" content="Discover the best AI tools ranked by real testing, ROI, and performance.">
 <link rel="canonical" href="${SITE_URL}/ai-tools/">
 <link rel="stylesheet" href="${SITE_URL}/assets/styles.css">
-
 </head>
 <body>
 ${globalHeader()}
 <div class="container">
-
 <h1>Best AI Tools (Tested & Ranked)</h1>
-
 <p class="category-intro">
 We test AI tools based on real-world performance, monetization potential, and workflow efficiency — not hype.
 </p>
-
 <!-- 🔥 TOP CTA -->
 <section class="money-cta">
 <h2>#1 Recommended AI Tool</h2>
@@ -1793,28 +1720,22 @@ We test AI tools based on real-world performance, monetization potential, and wo
 See #1 Tool →
 </a>
 </section>
-                 
 <!-- 🔥 CATEGORY GRID -->
 <section class="hub-grid">
 ${Object.keys(topics).map(cat => `
 <div class="hub-card">
-
 <h3>
 <a href="${SITE_URL}/ai-tools/${cat}/">
 ${formatCategoryTitle(cat)}
 </a>
 </h3>
-
 <p>Explore top-performing tools in this category.</p>
-
 <a href="${SITE_URL}/ai-tools/${cat}/" class="cta-btn">
 View Tools →
 </a>
-
 </div>
 `).join("")}
 </section>
-
 <!-- 🔥 TRUST BLOCK -->
 <div class="author-box">
 <p>
@@ -1822,7 +1743,6 @@ All tools are tested based on structured methodology, real use cases, and moneti
 No paid placements. No inflated rankings.
 </p>
 </div>
-
 </div>
 </body>
 </html>
@@ -1833,7 +1753,6 @@ for (const topic in topics) {
   const list = topics[topic]
     .map(p => `<li><a href="${p.url}">${p.title}</a></li>`)
     .join("");
-
   const topicTitle = formatCategoryTitle(topic);
   const topicURL = `${SITE_URL}/ai-tools/${topic}/`;
 
@@ -1854,31 +1773,25 @@ for (const topic in topics) {
 <body>
 ${globalHeader()}
 <div class="container">
-
 <h1>${topicTitle}</h1>
-
 <p class="category-intro">
 Comprehensive analysis of ${topicTitle} based on structured testing methodology,
 feature benchmarking, and real-world implementation workflows.
 </p>
-
 <section class="hub-grid">
 ${topics[topic]
 .slice(0,6)
 .map(p=>`
 <div class="hub-card">
-
 <h3>
   <a href="${p.url}">
     ${escapeJson(p.title)}
   </a>
 </h3>
-
 <p>${p.description}</p>
 </div>
 `).join("")}
 </section>
-
 <h2>All Reviews</h2>
 <ul class="clean-list">
 ${list}
@@ -1887,12 +1800,10 @@ ${list}
 </body>
 </html>
 `;
-
   const outputDir = `_site/ai-tools/${topic}`;
   fs.mkdirSync(outputDir, { recursive: true });
   fs.writeFileSync(`${outputDir}/index.html`, html);
 }
-
 generatePostSitemap(posts);
 generatePageSitemap();
 generateCategorySitemap(topics);
@@ -1904,15 +1815,11 @@ generateSitemapIndex();
    TAG TAXONOMY ENGINE
 ========================= */
 const tags = {};
-
 posts.forEach(post=>{
 const words = post.title.toLowerCase().split(/\W+/);
-
 words.forEach(word=>{
 if(word.length < 5) return;
-
 if(!tags[word]) tags[word]=[];
-
 tags[word].push(post);
 });
 });
@@ -1920,11 +1827,9 @@ tags[word].push(post);
 /* Build tag pages */
 for(const tag in tags){
 if(tags[tag].length < 2) continue;
-
 const list = tags[tag]
 .map(p=>`<li><a href="${p.url}">${p.title}</a></li>`)
 .join("");
-
 const dir = `_site/tag/${tag}`;
 fs.mkdirSync(dir,{recursive:true});
 fs.writeFileSync(`${dir}/index.html`,`
@@ -1965,7 +1870,6 @@ const authorPosts = posts.map(p=>`
   </a>
 </li>
 `).join("");
-
 fs.mkdirSync(`_site/author`,{recursive:true});
 fs.writeFileSync(`_site/author/index.html`,`
 
@@ -2002,53 +1906,43 @@ fs.writeFileSync(`_site/author/index.html`,`
     "https://github.com/justingerad05"
   ]
 }
-
 </script>
 </head>
 <body>
 ${globalHeader()}
 <div class="container">
-
 <h1 class="author-title">Justin Gerald</h1>
-
 <p class="author-sub">
 AI Software Analyst | Structured Testing & Monetization Research
 </p>
-
 <div class="author-box">
 <p>
 Justin Gerald is the founder of ReviewLab, an independent AI software research platform 
 focused on structured testing methodology, feature verification, competitive positioning, 
 and monetization viability analysis.
 </p>
-
 <p>
 Each published review is based on:
 </p>
-
 <ul>
 <li>Hands-on product evaluation</li>
 <li>Workflow integration testing</li>
 <li>Competitive feature benchmarking</li>
 <li>ROI and monetization modeling</li>
 </ul>
-
 <p>
 ReviewLab does not publish anonymous reviews or automated ratings.
 All analysis is independently structured and manually evaluated.
 </p>
 </div>
-
 <h2>Latest Reviews</h2>
 <ul class="post-list">
 ${authorPosts}
 </ul>
-
 </div>
 </body>
 </html>
 `);
-
 fs.writeFileSync("_site/_data/posts.json",JSON.stringify(posts,null,2));
 
 const searchIndex = posts.map(p=>({
@@ -2057,9 +1951,7 @@ const searchIndex = posts.map(p=>({
   category:p.category,
   description:p.description
 }));
-
 fs.writeFileSync("_site/search-index.json", JSON.stringify(searchIndex));
-
 fs.writeFileSync("_site/robots.txt",`
 User-agent: *
 Allow: /
@@ -2067,7 +1959,6 @@ Disallow: /page/
 
 Sitemap: ${SITE_URL}/sitemap.xml
 `);
-
 fs.copyFileSync("assets/styles.css","_site/assets/styles.css");
 fs.copyFileSync("assets/og-default.jpg","_site/assets/og-default.jpg");
 fs.copyFileSync("assets/og-cta-tested.jpg","_site/assets/og-cta-tested.jpg");
@@ -2083,11 +1974,9 @@ const pagePosts = posts.slice(start,end);
 const homepagePosts = pagePosts.map(post => `
 <li class="post-card" data-category="${post.category}">
   <a href="${post.url}" class="post-link">
-    
     <img data-src="${post.thumb}" 
          alt="${post.title}" 
          class="thumb lazy">
-    
     <div>
       <div class="post-title">
         ${post.title}
@@ -2096,7 +1985,6 @@ const homepagePosts = pagePosts.map(post => `
         Published ${new Date(post.date).toLocaleDateString("en-US",{year:"numeric",month:"long",day:"numeric"})}
       </div>
     </div>
-
   </a>
 </li>
 `).join("");
@@ -2123,7 +2011,6 @@ const homepage = `<!doctype html>
 <meta name="robots" content="index, follow">
 <link rel="canonical" href="${SITE_URL}/">
 <link rel="stylesheet" href="${SITE_URL}/assets/styles.css">
-
 <script type="application/ld+json">
 [
 {
@@ -2152,7 +2039,6 @@ ${pagePosts.map((post,i)=>`
 }
 ]
 </script>
-
 </head>
 <body class="homepage-bg homepage-root">
 ${globalHeader()}
@@ -2167,32 +2053,25 @@ ${globalHeader()}
 <option value="ai-image-generators">AI Image</option>
 <option value="automation-tools">Automation</option>
 </select>
-
 </div>
-
 <h1>Independent AI Software Reviews & Monetization Analysis</h1>
-
 <h2 class="hero-authority">
 Structured testing. Real implementation. Zero hype.
 </h2>
-
 <p class="sub">
 Review Lab analyzes AI tools based on performance, usability,
 and real-world monetization potential — not marketing claims.
 </p>
-
 <div class="trust-bar">
   <div>✔ Independent Analysis</div>
   <div>✔ Structured Testing Framework</div>
   <div>✔ No Anonymous Authors</div>
   <div>✔ ROI-Focused Reviews</div>
 </div>
-
 <section class="email-capture">
 <h3>Get AI Tools Worth Using</h3>
 <p>Only performance-tested software with real implementation value.
 No spam. No affiliate-first bias.</p>
-
 <p style="font-size:14px; color:#64748b;">
 Join 1,000+ readers discovering AI tools that actually generate income.
 </p>
@@ -2203,27 +2082,20 @@ Join 1,000+ readers discovering AI tools that actually generate income.
 <button type="submit">Get Free Reviews</button>
 </div>
 </form>
-
 </section>
-
 <ul class="post-list">
 ${homepagePosts}
 </ul>
-
 ${pagination}
-
 </div>
-
 <script>
 document.addEventListener("DOMContentLoaded", function(){
-
 const filter = document.getElementById("categoryFilter");
 const searchInput = document.getElementById("searchInput");
 
 if(filter){
 filter.addEventListener("change", function(){
 const val = this.value;
-
 document.querySelectorAll(".post-card").forEach(card=>{
 if(val==="all"){
 card.style.display="flex";
@@ -2233,7 +2105,6 @@ card.style.display = card.dataset.category===val ? "flex" : "none";
 });
 });
 }
-
 if(searchInput){
 searchInput.addEventListener("keyup", function(){
 const value = this.value.toLowerCase();
@@ -2246,27 +2117,20 @@ card.style.display = text.includes(value) ? "flex" : "none";
 }
 
 /* Lazy load */
-
 const lazyImgs=document.querySelectorAll(".lazy");
-
 const io=new IntersectionObserver(entries=>{
 entries.forEach(e=>{
 if(e.isIntersecting){
 const img=e.target;
 img.src=img.dataset.src;
 img.onload=()=>img.classList.add("loaded");
-io.unobserve(img);
-}
+io.unobserve(img);}
 });
 });
-
 lazyImgs.forEach(img=>io.observe(img));
-
 });
 </script>
-
 <script src="${SITE_URL}/assets/email.js"></script>
-
 </body>
 </html>
 `;
@@ -2293,7 +2157,6 @@ ${globalHeader()}
 <input type="text" id="searchBox" class="search-input" placeholder="Search..." class="search">
 <ul id="results" class="post-list"></ul>
 </div>
-
 <script>
 let posts = [];
 
@@ -2302,7 +2165,6 @@ fetch("/search-index.json")
 .then(data=>{
   posts = data;
 });
-
 const box = document.getElementById("searchBox");
 const results = document.getElementById("results");
 
@@ -2321,7 +2183,6 @@ results.innerHTML+=\`<li><a href="\${p.url}" class="post-title">\${p.title}</a><
 </body>
 </html>
 `);
-
 const outputPath = page===1
 ? "_site/index.html"
 : `_site/page/${page}/index.html`;
@@ -2331,7 +2192,6 @@ fs.mkdirSync(`_site/page/${page}`,{recursive:true});
 }
 fs.writeFileSync(outputPath, homepage);
 }
-
 fs.mkdirSync("_site/admin", { recursive: true });
 fs.copyFileSync("admin/index.html", "_site/admin/index.html");
 
@@ -2347,9 +2207,7 @@ async function purgeCloudflareCache() {
     console.log("⚠ Skipping purge: Missing API_TOKEN or ZONE_ID env variables.");
     return;
   }
-
   console.log(`Attempting to purge cache for Zone: ${ZONE_ID}...`);
-
   try {
     const response = await fetch(`https://api.cloudflare.com/client/v4/zones/${ZONE_ID}/purge_cache`, {
       method: "POST",
@@ -2359,7 +2217,6 @@ async function purgeCloudflareCache() {
       },
       body: JSON.stringify({ purge_everything: true })
     });
-
     const result = await response.json();
     
     if (result.success) {
