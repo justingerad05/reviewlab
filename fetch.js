@@ -533,16 +533,53 @@ const wordCount = textOnly.split(/\s+/).length;
 const productMatch = getProductData(title, rawHtml);
 const productInfo = productMatch || {};
 
-// AI Choice Selection based on Title inspection
-const lowerTitle = title.toLowerCase();
-const isReview = lowerTitle.includes("review") || 
-                 lowerTitle.includes("working") || 
-                 lowerTitle.includes("verdict") || 
-                 lowerTitle.includes("rating") || 
-                 lowerTitle.includes("results") || 
-                 lowerTitle.includes("worth it") ||
-                 lowerTitle.includes("better");
+/* POST TYPE — EXPLICIT AND FUTURE-PROOF
+   The Blogger label is the authoritative source.
 
+   Supported labels:
+   - review
+   - supporting
+   - support
+
+   If "review" exists, the post is a main review.
+   If "supporting" or "support" exists, it is a supporting article.
+
+   We intentionally do NOT infer review status from the title.
+   This prevents future supporting articles containing words such as
+   "better", "results", "rating", "working", etc. from being treated
+   as reviews.
+*/
+const hasReviewLabel =
+  labels.includes("review") ||
+  labels.includes("main-review") ||
+  labels.includes("main review");
+
+const hasSupportingLabel =
+  labels.includes("supporting") ||
+  labels.includes("support") ||
+  labels.includes("supporting-article") ||
+  labels.includes("supporting article");
+
+let isReview = false;
+
+if (hasReviewLabel) {
+  isReview = true;
+} else if (hasSupportingLabel) {
+  isReview = false;
+} else {
+  /*
+    Backward-compatible fallback for older posts that do not yet
+    have an explicit post-type label.
+
+    Only strong review signals are allowed here.
+    Generic words such as "better", "results", or "working" are
+    deliberately excluded.
+  */
+  isReview =
+    lowerTitle.includes("review") ||
+    lowerTitle.includes("verdict") ||
+    lowerTitle.includes("rating");
+}
 const reviewScore = calculateReviewScore({
   textLength: wordCount,
   pros,
@@ -620,21 +657,25 @@ const articleSchema = {
 };
 
 posts.push({
-title,
-slug,
-html: rawHtml,
-url,
-description,
-og: primaryOG,
-thumb: primaryOG,
-readTime,
-date:entry.published,
-lastmod: new Date().toISOString(),
-category: category,
-product: productInfo,
-score: reviewScore,
-isReview: isReview,
-schemas: isReview ? JSON.stringify([articleSchema,productSchema]) : JSON.stringify([articleSchema])
+  title,
+  slug,
+  html: rawHtml,
+  url,
+  description,
+  og: primaryOG,
+  thumb: primaryOG,
+  readTime,
+  date: entry.published,
+  lastmod: new Date().toISOString(),
+  category: category,
+  product: productInfo,
+  score: reviewScore,
+  isReview: isReview,
+  postType: isReview ? "review" : "supporting",
+  labels,
+  schemas: isReview
+    ? JSON.stringify([articleSchema, productSchema])
+    : JSON.stringify([articleSchema])
 });
 }
 
@@ -704,7 +745,12 @@ function generateToC(html) {
 }
 
 function generateTrustBlock(post){
-return `
+
+if(!post || post.postType !== "review"){
+  return "";
+}
+
+return 
 <section class="trust-review-box">
 <h2>Why You Can Trust This Review</h2>
 
@@ -725,9 +771,14 @@ ${post.score.score}/100
 }
 
 function generateProductBox(post){
-if(!post.product || !post.isReview){
-return "";
+if(
+  !post ||
+  post.postType !== "review" ||
+  !post.product
+){
+  return "";
 }
+
 const p = post.product;
 return `
 <section class="product-summary-box">
@@ -972,6 +1023,20 @@ return score;
 
 /* AUTO COMPARISON ENGINE - UPDATED */
 function generateComparison(postA, postB) {
+
+  /*
+    HARD SAFETY RULE:
+    Comparison pages may only be generated from two main reviews.
+  */
+  if(
+    !postA ||
+    !postB ||
+    postA.postType !== "review" ||
+    postB.postType !== "review"
+  ){
+    return;
+  }
+
   const slug = `${postA.slug}-vs-${postB.slug}`;
   const url = `${SITE_URL}/comparisons/${slug}/`;
 
@@ -1047,7 +1112,12 @@ ${globalHeader()}
     </div>
     <section class="verdict-box">
         <h2>The Verdict</h2>
-        <p>After testing both tools, <strong>${postA.title}</strong> excels in specialized output, while <strong>${postB.title}</strong> offers superior workflow automation. Choose based on your primary volume needs.</p>
+        <p>
+Compare the strengths, limitations, pricing, and intended use cases of
+<strong>${postA.title}</strong> and
+<strong>${postB.title}</strong>
+to determine which option better matches your specific needs.
+</p>
         <div class="verdict-btns">
           <a href="${postA.url}" class="cta-btn">Get ${postA.title}</a>
           <a href="${postB.url}" class="cta-btn">Get ${postB.title}</a>
@@ -1071,13 +1141,16 @@ const comparisonPairs = new Set();
 posts.forEach((postA, i) => {
   const related = posts
 
-.filter(p=>{
-return (
-p.slug !== postA.slug &&
-p.isReview &&
-postA.isReview
-);
+.filter(p => {
+  return (
+    p.slug !== postA.slug &&
+    postA.postType === "review" &&
+    p.postType === "review" &&
+    postA.product &&
+    p.product
+  );
 })
+
 .map(p=>({
 post:p,
 score:calculateComparisonScore(
@@ -1117,9 +1190,9 @@ p.product
 });
 const comparisonLinks = [];
 for(let i=0;i<posts.length;i++){
-  if (!posts[i].isReview) continue; // Supporting posts completely skip master comparisons lists
+  if (posts[i].postType !== "review") continue;
   for(let j=i+1;j<posts.length && j<i+4;j++){
-    if (!posts[j].isReview) continue; 
+    if (posts[j].postType !== "review") continue;
     const slugs = [posts[i].slug, posts[j].slug];
     const slug = `${posts[i].slug}-vs-${posts[j].slug}`;
     comparisonLinks.push(`
@@ -1415,11 +1488,13 @@ height="360">
   <p>If you want something that delivers real results, this is the one most people switch to.</p>
   <a href="javascript:void(0)" class="cta-btn">View Best Alternative →</a>
 </section>
-${post.isReview ? `
+
+${post.postType === "review" ? `
 <section class="comparison-block">
 <h3>Compare This Tool</h3>
 <ul>
 ${(generatedComparisons.get(post.slug) || [])
+  
 .map(comp => `
 <li>
 <a href="${SITE_URL}/comparisons/${comp.slug}/">
