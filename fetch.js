@@ -1494,7 +1494,7 @@ ${post.postType === "review" ? `
 <h3>Compare This Tool</h3>
 <ul>
 ${(generatedComparisons.get(post.slug) || [])
-  
+
 .map(comp => `
 <li>
 <a href="${SITE_URL}/comparisons/${comp.slug}/">
