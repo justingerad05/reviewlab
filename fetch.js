@@ -532,7 +532,7 @@ const {pros,cons} = extractProsCons(textOnly);
 const wordCount = textOnly.split(/\s+/).length;
 const productMatch = getProductData(title, rawHtml);
 const productInfo = productMatch || {};
-
+const lowerTitle = title.toLowerCase();
 /* POST TYPE — EXPLICIT AND FUTURE-PROOF
    The Blogger label is the authoritative source.
 
