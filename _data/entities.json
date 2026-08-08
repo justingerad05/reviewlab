@@ -1,12 +1,62 @@
 [
-{
-"name":"ChatGPT",
-"company":"OpenAI",
-"type":"AI Assistant",
-"related":[
-"GPT",
-"Claude",
-"Gemini"
-]
-}
+  {
+    "name": "ChatGPT",
+    "brand": "OpenAI",
+    "entityType": "AI assistant",
+    "related": ["OpenAI", "Claude", "Gemini"]
+  },
+  {
+    "name": "OpenAI",
+    "brand": "OpenAI",
+    "entityType": "AI company",
+    "related": ["ChatGPT"]
+  },
+  {
+    "name": "Claude",
+    "brand": "Anthropic",
+    "entityType": "AI assistant",
+    "related": ["Anthropic", "ChatGPT", "Gemini"]
+  },
+  {
+    "name": "Anthropic",
+    "brand": "Anthropic",
+    "entityType": "AI company",
+    "related": ["Claude"]
+  },
+  {
+    "name": "Gemini",
+    "brand": "Google",
+    "entityType": "AI assistant",
+    "related": ["Google", "ChatGPT", "Claude"]
+  },
+  {
+    "name": "Google",
+    "brand": "Google",
+    "entityType": "Technology company",
+    "related": ["Gemini"]
+  },
+  {
+    "name": "Midjourney",
+    "brand": "Midjourney",
+    "entityType": "AI image generator",
+    "related": ["AI image generation"]
+  },
+  {
+    "name": "ElevenLabs",
+    "brand": "ElevenLabs",
+    "entityType": "AI voice platform",
+    "related": ["AI voice", "Text to speech"]
+  },
+  {
+    "name": "Zapier",
+    "brand": "Zapier",
+    "entityType": "Automation platform",
+    "related": ["Automation", "AI workflows"]
+  },
+  {
+    "name": "Canva",
+    "brand": "Canva",
+    "entityType": "Design platform",
+    "related": ["AI design", "AI image generation"]
+  }
 ]
