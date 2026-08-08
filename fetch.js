@@ -746,26 +746,31 @@ function generateToC(html) {
 
 function generateTrustBlock(post){
 
-if(!post || post.postType !== "review"){
-  return "";
-}
+  /*
+    HARD SAFETY RULE:
+    Trust/review block belongs ONLY to main review posts.
+    Supporting articles must never receive this block.
+  */
+  if(!post || post.postType !== "review"){
+    return "";
+  }
 
-return 
+  return `
 <section class="trust-review-box">
-<h2>Why You Can Trust This Review</h2>
+  <h2>Why You Can Trust This Review</h2>
 
-<ul class="trust-list">
-<li>✔ Product researched using our structured review methodology.</li>
-<li>✔ Features compared against competing software.</li>
-<li>✔ Pros, limitations and overall value independently evaluated.</li>
-<li>✔ Review score generated from ReviewLab's scoring framework.</li>
-</ul>
-<div class="review-score">
+  <ul class="trust-list">
+    <li>✔ Product researched using our structured review methodology.</li>
+    <li>✔ Features compared against competing software.</li>
+    <li>✔ Pros, limitations and overall value independently evaluated.</li>
+    <li>✔ Review score generated from ReviewLab's scoring framework.</li>
+  </ul>
 
-<strong>Overall Score:</strong>
-${post.score.score}/100
-(${post.score.ratingValue}/5)
-</div>
+  <div class="review-score">
+    <strong>Overall Score:</strong>
+    ${post.score.score}/100
+    (${post.score.ratingValue}/5)
+  </div>
 </section>
 `;
 }
