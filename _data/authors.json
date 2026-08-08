@@ -1,21 +1,19 @@
 [
- {
- "id":"justin",
-
- "name":"Justin Gerald",
-
- "role":"AI Tools Reviewer",
-
- "experience":
- "Testing AI software and automation tools",
-
- "expertise":[
- "AI tools",
- "Affiliate marketing",
- "Automation"
- ],
-
- "social":{
- }
- }
+  {
+    "name": "Justin Gerald",
+    "slug": "justin-gerald",
+    "role": "AI Software Analyst",
+    "site": "ReviewLab",
+    "bio": "Independent AI software analyst specializing in structured testing methodology, workflow evaluation, competitive analysis and monetization research.",
+    "url": "/author/",
+    "knowsAbout": [
+      "AI software reviews",
+      "AI automation",
+      "AI writing tools",
+      "AI image generation",
+      "AI voice tools",
+      "software testing",
+      "AI monetization"
+    ]
+  }
 ]
