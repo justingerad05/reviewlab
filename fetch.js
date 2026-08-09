@@ -2440,9 +2440,6 @@ ${comp.title}
 </section>
 ` : ""}
 
-${post.isReview ? generateAutomaticAlternatives(post, posts) : ""}
-${post.isReview ? generateReviewHistory(post) : ""}
-
 <section class="internal-widget">
 <h3>Continue Reading</h3>
 <ul class="internal-list">
