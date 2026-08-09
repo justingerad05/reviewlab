@@ -84,7 +84,6 @@ function safeArray(value){
 /* =========================================================
    REVIEWLAB — PERMANENT DATA + AUTHORITY ENGINE
    ========================================================= */
-
 function getReviewData(productSlug){
   return reviewsData.find(
     item => item.productSlug === productSlug
