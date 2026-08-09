@@ -1141,43 +1141,74 @@ const seenSlugs = new Set();
 const posts=[];
 
 function getProductData(title, content = "") {
-const searchText = `${title} ${content}`;
-const normalizedSearch = normalizeText(searchText);
-const product = products.find(product => {
-const productName = safeLower(product?.name);
-const productSlug = safeLower(product?.slug);
 
-const variations = [
-productName,
-productSlug,
-productSlug.replace(/-/g, " "),
-productSlug.replace(/-/g, ""),
-productName.replace(/\s+/g, ""),
-productName.replace(/\s+/g, "-")
-]
-.filter(Boolean)
-.map(normalizeText);
-return variations.some(v => normalizedSearch.includes(v));
-});
-if(!product) return null;
+  const searchText = `${title} ${content}`;
+  const normalizedSearch = normalizeText(searchText);
 
-return {
-slug: product.slug || "",
-name: product.name || "",
-brand: product.brand || product.name || "",
-developer: product.developer || "",
-category: product.category || "",
-website: product.website || "",
-price: product.price || "",
-pricingModel: product.pricingModel || "",
-rating: product.rating || 4.5,
-reviewed: product.reviewed ?? true,
-featured: product.featured ?? false,
-affiliate: product.affiliate || "",
-pros: product.pros || [],
-cons: product.cons || [],
-bestFor: product.bestFor || []
-};
+  const product = products.find(product => {
+
+    const productName = safeLower(product?.name);
+    const productSlug = safeLower(product?.slug);
+
+    const variations = [
+      productName,
+      productSlug,
+      productSlug.replace(/-/g, " "),
+      productSlug.replace(/-/g, ""),
+      productName.replace(/\s+/g, ""),
+      productName.replace(/\s+/g, "-")
+    ]
+      .filter(Boolean)
+      .map(normalizeText);
+
+    return variations.some(v =>
+      normalizedSearch.includes(v)
+    );
+  });
+
+  if (!product) return null;
+
+  return {
+    slug: product.slug || "",
+    name: product.name || "",
+    brand: product.brand || product.name || "",
+    developer: product.developer || "",
+
+    category: product.category || "",
+    website: product.website || "",
+
+    price: product.price || "",
+    pricingModel: product.pricingModel || "",
+
+    trial: product.trial ?? false,
+    refund: product.refund ?? false,
+
+    rating: Number(product.rating || 0),
+
+    reviewed: product.reviewed ?? true,
+    featured: product.featured ?? false,
+
+    affiliate: product.affiliate || "",
+
+    pros: safeArray(product.pros),
+    cons: safeArray(product.cons),
+    bestFor: safeArray(product.bestFor),
+
+    alternative: safeArray(product.alternative),
+    features: safeArray(product.features),
+    keywords: safeArray(product.keywords),
+
+    audience: safeArray(product.audience),
+    useCases: safeArray(product.useCases),
+    strengths: safeArray(product.strengths),
+
+    lastUpdated: product.lastUpdated || "",
+    version: product.version || "",
+
+    platforms: safeArray(product.platforms),
+
+    performance: product.performance || {}
+  };
 }
 
 function detectTopic(title, html) {
@@ -2439,6 +2470,9 @@ ${comp.title}
 <a href="javascript:void(0)" class="cta-btn">See Best Tool →</a>
 </section>
 ` : ""}
+
+${post.isReview ? generateAutomaticAlternatives(post, posts) : ""}
+${post.isReview ? generateReviewHistory(post) : ""}
 
 <section class="internal-widget">
 <h3>Continue Reading</h3>
