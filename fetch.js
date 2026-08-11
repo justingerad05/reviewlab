@@ -1475,7 +1475,6 @@ posts.push({
   lastmod: new Date().toISOString(),
   category: category,
   product: productInfo,
-  postType,
   score: reviewScore,
   isReview: isReview,
   reviewScore: reviewScore.reviewScore || {},
