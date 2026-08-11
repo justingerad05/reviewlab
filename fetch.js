@@ -84,6 +84,7 @@ function safeArray(value){
 /* =========================================================
    REVIEWLAB — PERMANENT DATA + AUTHORITY ENGINE
    ========================================================= */
+
 function getReviewData(productSlug){
   return reviewsData.find(
     item => item.productSlug === productSlug
@@ -327,6 +328,7 @@ function buildReviewScore({
 /* =========================================================
    REVIEW TIMELINE
    ========================================================= */
+
 function generateReviewTimeline(post){
   if(!post.isReview) return "";
 
@@ -1540,6 +1542,7 @@ function generateToC(html) {
     const id = text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
     headings.push({ text, id });
   }
+
   if (headings.length === 0) return { tocHtml: "", updatedHtml: html };
 
   // Create the ToC HTML block
