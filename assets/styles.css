@@ -1138,15 +1138,21 @@ color:white;
 }
 
 .footer-links{
-display:flex;
-flex-wrap:wrap;
-justify-content:center;
-gap:18px;
-margin-bottom:12px;
+  display:flex;
+  flex-direction:row;
+  flex-wrap:wrap;
+  align-items:center;
+  justify-content:flex-start;
+  gap:10px 18px;
+  width:100%;
+  margin:0 0 12px;
+  text-align:left;
 }
 
 .footer-links a{
-margin:0;
+  display:inline-block;
+  margin:0;
+  white-space:nowrap;
 }
 
 .footer-links a:hover{
@@ -1154,8 +1160,10 @@ text-decoration:underline;
 }
 
 .footer-copy{
-margin-top:15px;
-color:#6b7280;
+  width:100%;
+  margin:15px 0 0;
+  text-align:left;
+  color:#6b7280;
 }
 
 .floating-icon{
