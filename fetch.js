@@ -327,7 +327,6 @@ function buildReviewScore({
 /* =========================================================
    REVIEW TIMELINE
    ========================================================= */
-
 function generateReviewTimeline(post){
   if(!post.isReview) return "";
 
