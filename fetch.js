@@ -307,7 +307,6 @@ function buildReviewScore({
     : 0;
 
   const score100 = Math.round(finalScore * 10);
-
   return {
     score: score100,
     ratingValue: (score100 / 20).toFixed(1),
