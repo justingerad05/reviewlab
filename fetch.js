@@ -1541,7 +1541,6 @@ function generateToC(html) {
     const id = text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
     headings.push({ text, id });
   }
-
   if (headings.length === 0) return { tocHtml: "", updatedHtml: html };
 
   // Create the ToC HTML block
