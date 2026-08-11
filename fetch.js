@@ -1322,7 +1322,6 @@ const primaryOG = ogImages[0];
 const readTime = Math.max(1,
 Math.ceil(textOnly.split(/\s+/).length / 200)
 );
-const {pros,cons} = extractProsCons(textOnly);
 
 /* SCHEMA */
 const wordCount = textOnly.split(/\s+/).length;
