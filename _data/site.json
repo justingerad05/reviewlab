@@ -1,3 +1,8 @@
 {
-  "url": "https://reviewlab.pages.dev"
+  "name": "ReviewLab",
+  "url": "https://reviewlab.pages.dev",
+  "description": "Independent AI software reviews, structured testing, comparisons and monetization analysis.",
+  "authorSlug": "justin-gerald",
+  "defaultCategory": "ai-writing-tools",
+  "updated": "2026-08"
 }
