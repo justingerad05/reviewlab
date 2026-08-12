@@ -3,36 +3,32 @@
     "productSlug": "sound-soreal",
     "reviewedBy": "justin-gerald",
     "testDuration": "",
-    "platforms": [],
-    "methodology": [
-      "Installation",
-      "Setup",
-      "Speed",
-      "Output Quality",
-      "Customer Support",
-      "Pricing",
-      "Refund",
-      "Updates",
-      "Competition",
-      "Overall Score"
-    ]
+    "platforms": ["Windows", "Mac", "Web", "Mobile"],
+    "methodology": ["Installation", "Setup", "Speed", "Output Quality", "Customer Support", "Pricing", "Refund", "Updates", "Competition", "Overall Score"],
+    "scores": {
+      "features": null,
+      "easeOfUse": null,
+      "pricing": null,
+      "support": null,
+      "automation": null,
+      "accuracy": null
+    },
+    "notes": "Populate scores only from verified ReviewLab testing evidence or explicit score statements in the review."
   },
   {
     "productSlug": "dfy-ai-suite",
     "reviewedBy": "justin-gerald",
     "testDuration": "",
-    "platforms": [],
-    "methodology": [
-      "Installation",
-      "Setup",
-      "Speed",
-      "Output Quality",
-      "Customer Support",
-      "Pricing",
-      "Refund",
-      "Updates",
-      "Competition",
-      "Overall Score"
-    ]
+    "platforms": ["Web"],
+    "methodology": ["Installation", "Setup", "Speed", "Output Quality", "Customer Support", "Pricing", "Refund", "Updates", "Competition", "Overall Score"],
+    "scores": {
+      "features": null,
+      "easeOfUse": null,
+      "pricing": null,
+      "support": null,
+      "automation": null,
+      "accuracy": null
+    },
+    "notes": "Populate scores only from verified ReviewLab testing evidence or explicit score statements in the review."
   }
 ]
