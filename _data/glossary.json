@@ -1,52 +1,12 @@
 [
-  {
-    "term": "Artificial Intelligence",
-    "slug": "artificial-intelligence",
-    "definition": "Computer systems designed to perform tasks that normally require human intelligence."
-  },
-  {
-    "term": "Machine Learning",
-    "slug": "machine-learning",
-    "definition": "A branch of artificial intelligence in which systems learn patterns from data."
-  },
-  {
-    "term": "Prompt Engineering",
-    "slug": "prompt-engineering",
-    "definition": "The practice of designing instructions that guide an AI model toward a desired output."
-  },
-  {
-    "term": "Automation",
-    "slug": "automation",
-    "definition": "Using software to perform repeatable tasks with reduced manual intervention."
-  },
-  {
-    "term": "LLM",
-    "slug": "llm",
-    "definition": "Large Language Model, an AI model trained to process and generate human language."
-  },
-  {
-    "term": "Inference",
-    "slug": "inference",
-    "definition": "The process through which a trained AI model generates an output from an input."
-  },
-  {
-    "term": "API",
-    "slug": "api",
-    "definition": "An Application Programming Interface that allows software systems to communicate."
-  },
-  {
-    "term": "Token",
-    "slug": "token",
-    "definition": "A unit of text processed by many language models."
-  },
-  {
-    "term": "Embedding",
-    "slug": "embedding",
-    "definition": "A numerical representation of information used by AI systems to measure relationships and similarity."
-  },
-  {
-    "term": "Fine Tuning",
-    "slug": "fine-tuning",
-    "definition": "Additional training of an existing AI model on a specialized dataset."
-  }
+  {"slug":"artificial-intelligence","term":"Artificial Intelligence","definition":"Computer systems designed to perform tasks that normally require human intelligence, such as language understanding, prediction, generation or decision support."},
+  {"slug":"machine-learning","term":"Machine Learning","definition":"A branch of artificial intelligence in which models learn patterns from data to make predictions or produce outputs."},
+  {"slug":"prompt-engineering","term":"Prompt Engineering","definition":"The practice of designing and refining instructions given to an AI model to obtain more useful, reliable or controlled outputs."},
+  {"slug":"automation","term":"Automation","definition":"The use of software or systems to execute recurring tasks or workflows with reduced manual intervention."},
+  {"slug":"llm","term":"LLM","definition":"Large Language Model, a model trained on large amounts of text and used for language generation, transformation and understanding."},
+  {"slug":"inference","term":"Inference","definition":"The process of using a trained machine-learning model to generate a prediction or output from an input."},
+  {"slug":"api","term":"API","definition":"Application Programming Interface, a defined way for software systems to communicate and exchange data or request actions."},
+  {"slug":"token","term":"Token","definition":"A unit of text or data processed by a language model. Tokenization determines how input and output are represented internally."},
+  {"slug":"embedding","term":"Embedding","definition":"A numerical representation of data, often text, that captures semantic relationships so software can compare or retrieve related information."},
+  {"slug":"fine-tuning","term":"Fine Tuning","definition":"Additional training of a pretrained model on a targeted dataset to adapt its behavior or performance for a specific task or domain."}
 ]
