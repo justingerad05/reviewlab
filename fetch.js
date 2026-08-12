@@ -655,6 +655,113 @@ function generateReviewHistory(post){
 }
 
 /* =========================================================
+             SIDEBAR RELATED GUIDE
+   ========================================================= */
+function generateRotatingRelatedGuides(currentPost, allPosts) {
+
+  const currentUrl = currentPost?.url || "";
+
+  const candidates = safeArray(allPosts)
+    .filter(p => p.url && p.url !== currentUrl)
+    .filter(p => !p.isReview);
+
+  if (!candidates.length) {
+    return `
+      <div class="sidebar-card">
+        <h3>📚 Related Guides</h3>
+        <p>No supporting guides available yet.</p>
+      </div>
+    `;
+  }
+
+  const currentCategory =
+    String(currentPost?.category || "").toLowerCase();
+
+  const currentKeywords = [
+    ...safeArray(currentPost?.product?.keywords),
+    ...safeArray(currentPost?.tags),
+    currentCategory
+  ]
+    .map(x => String(x).toLowerCase())
+    .filter(Boolean);
+
+  function relevanceScore(post) {
+
+    const text = [
+      post.title,
+      post.description,
+      post.category,
+      ...safeArray(post.tags),
+      ...safeArray(post.product?.keywords)
+    ]
+      .join(" ")
+      .toLowerCase();
+
+    let score = 0;
+
+    currentKeywords.forEach(keyword => {
+      if (keyword && text.includes(keyword)) {
+        score += 3;
+      }
+    });
+
+    if (
+      String(post.category || "").toLowerCase() ===
+      currentCategory
+    ) {
+      score += 8;
+    }
+
+    return score;
+  }
+
+  const ranked = candidates
+    .map(post => ({
+      post,
+      score: relevanceScore(post)
+    }))
+    .sort((a,b) => b.score - a.score);
+
+  /*
+     Rotation:
+     Each build starts from a different point in the
+     supporting-post pool instead of always showing
+     the exact same three articles.
+  */
+
+  const rotation =
+    Math.floor(Date.now() / (1000 * 60 * 60 * 24)) %
+    Math.max(ranked.length, 1);
+
+  const rotated = [
+    ...ranked.slice(rotation),
+    ...ranked.slice(0, rotation)
+  ];
+
+  const selected = rotated
+    .slice(0, 3)
+    .map(x => x.post);
+
+  return `
+    <div class="sidebar-card related-guides-widget">
+
+      <h3>📚 Related Guides</h3>
+
+      <ul>
+        ${selected.map(post => `
+          <li>
+            <a href="${post.url}">
+              ${escapeHtml(post.title)}
+            </a>
+          </li>
+        `).join("")}
+      </ul>
+
+    </div>
+  `;
+}
+
+/* =========================================================
    TRUST SIGNALS
    ========================================================= */
 
@@ -2491,15 +2598,7 @@ ${related}
 </p>
 </div>
 
-<!-- 5. INTERNAL LINKS -->
-<div class="sidebar-card">
-  <h3>📚 Related Guides</h3>
-  <ul>
-    <li><a href="/ai-tools/">Best AI Tools for Beginners</a></li>
-    <li><a href="/posts/">How I Made My First $100 Online</a></li>
-    <li><a href="/ai-tools/automation-tools/">Top Passive Income Systems</a></li>
-  </ul>
-</div>
+${generateRotatingRelatedGuides(post, posts)}
 
 <!-- DYNAMIC RECOMMENDATION WIDGETS -->
 
