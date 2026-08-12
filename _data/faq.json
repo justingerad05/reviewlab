@@ -2,18 +2,10 @@
   {
     "category": "general",
     "questions": [
-      {
-        "question": "How does ReviewLab test AI tools?",
-        "answer": "ReviewLab evaluates AI software using a structured methodology covering setup, usability, performance, output quality, pricing, support, updates and competitive positioning."
-      },
-      {
-        "question": "Are ReviewLab rankings sponsored?",
-        "answer": "ReviewLab rankings are intended to be based on the site's review methodology rather than paid placement."
-      },
-      {
-        "question": "How often are reviews updated?",
-        "answer": "Reviews can be updated when pricing, features, product versions or testing results materially change."
-      }
+      {"question":"How does ReviewLab evaluate AI tools?","answer":"ReviewLab uses structured evaluation of features, usability, pricing, support, automation, accuracy and workflow suitability when evidence is available."},
+      {"question":"Are ReviewLab rankings sponsored?","answer":"ReviewLab's stated methodology is designed around independent evaluation rather than paid placement."},
+      {"question":"How often are reviews updated?","answer":"ReviewLab can record product updates, retesting and review-history changes in its structured data when verified information is available."},
+      {"question":"How should I compare AI tools?","answer":"Compare workflow fit, output quality, pricing, support, integrations, audience fit and independently recorded review scores."}
     ]
   }
 ]
