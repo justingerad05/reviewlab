@@ -1,1 +1,11 @@
-[]
+{
+  "pairs": [],
+  "weights": {
+    "category": 30,
+    "keywords": 20,
+    "pricing": 15,
+    "purpose": 15,
+    "audience": 10,
+    "workflow": 10
+  }
+}
