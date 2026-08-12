@@ -1147,7 +1147,9 @@ function extractCurrencyValue(html){
   const text = cleanText(html);
   const labeled = text.match(/(?:price|pricing|cost|starts? at|from)\s*[:\-]?\s*((?:[$€£₦]\s*)?[0-9][0-9,]*(?:\.[0-9]{1,2})?(?:\s*\/\s*(?:month|mo|year|yr|week|week|one[- ]time))?)/i);
   if(labeled?.[1]) return labeled[1].trim();
-  const generic = text.match(/(?:[$€£₦]\\s*)[0-9][0-9,]*(?:\\.[0-9]{1,2})?(?:\\s*\\/\\s*(?:month|mo|year|yr|week|one[- ]time))?/i);
+  const generic = text.match(
+  /(?:[$€£₦]\s*)[0-9][0-9,]*(?:\.[0-9]{1,2})?(?:\s*\/\s*(?:month|mo|year|yr|week|one[- ]time))?/i
+);
   return generic?.[0]?.trim() || "";
 }
 
