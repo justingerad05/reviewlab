@@ -1,19 +1,16 @@
 [
   {
-    "name": "Justin Gerald",
     "slug": "justin-gerald",
-    "role": "AI Software Analyst",
-    "site": "ReviewLab",
-    "bio": "Independent AI software analyst specializing in structured testing methodology, workflow evaluation, competitive analysis and monetization research.",
-    "url": "/author/",
-    "knowsAbout": [
-      "AI software reviews",
-      "AI automation",
-      "AI writing tools",
-      "AI image generation",
-      "AI voice tools",
-      "software testing",
-      "AI monetization"
+    "name": "Justin Gerald",
+    "jobTitle": "AI Software Analyst",
+    "url": "https://reviewlab.pages.dev/author/",
+    "description": "Independent AI software analyst specializing in structured testing methodology, feature verification, competitive positioning and monetization analysis.",
+    "knowsAbout": ["AI software reviews", "AI automation tools", "AI writing tools", "AI image generation tools", "SaaS monetization"],
+    "sameAs": [
+      "https://www.youtube.com/@Review2Lab",
+      "https://x.com/justingerad80500",
+      "https://www.plurk.com/justingerad05",
+      "https://github.com/justingerad05"
     ]
   }
 ]
