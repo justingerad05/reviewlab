@@ -804,8 +804,8 @@ function getWidgetProducts(posts){
 
     bestValue: [...reviews]
       .sort((a,b)=>
-        getPostOverallScore(b) -
-        getPostOverallScore(a)
+        Number(b.score?.score || 0) -
+        Number(a.score?.score || 0)
       ).slice(0,5),
 
     mostPopular: reviews.slice(0,5)
@@ -844,111 +844,112 @@ function generateDynamicSidebar(posts){
    RADAR SVG
    ========================================================= */
 
-function getReviewDimensions(post) {
-  const source = post?.score?.reviewScore || post?.reviewScore || {};
-  const reviewData = post?.reviewData?.scores || {};
-  const product = post?.product?.reviewScore || {};
-  const keys = ["easeOfUse", "accuracy", "automation", "features", "support", "pricing"];
-
-  return Object.fromEntries(keys.map(key => {
-    const values = [source[key], reviewData[key], product[key]].map(Number);
-    const value = values.find(v => Number.isFinite(v));
-    return [key, Number.isFinite(value) ? Math.max(0, Math.min(10, value)) : 0];
-  }));
-}
-
-function getPostOverallScore(post) {
-  const direct = Number(post?.score?.score);
-  if(Number.isFinite(direct) && direct > 0) return Math.round(direct);
-
-  const values = Object.values(getReviewDimensions(post)).filter(v => Number.isFinite(v) && v > 0);
-  return values.length
-    ? Math.round((values.reduce((a,b)=>a+b,0) / values.length) * 10)
-    : 0;
-}
-
 function generateRadarChart(post){
-  if(!post?.isReview) return "";
+  if(!post.isReview) return "";
 
-  const values = getReviewDimensions(post);
+  const values = post.score?.reviewScore || {};
+
   const axes = [
-    ["Speed",values.easeOfUse],
-    ["Accuracy",values.accuracy],
-    ["Automation",values.automation],
-    ["Templates",values.features],
-    ["Support",values.support],
-    ["Pricing",values.pricing]
+    ["Speed",Number.isFinite(Number(values.easeOfUse)) ? Number(values.easeOfUse) : 0],
+    ["Accuracy",Number.isFinite(Number(values.accuracy)) ? Number(values.accuracy) : 0],
+    ["Automation",Number.isFinite(Number(values.automation)) ? Number(values.automation) : 0],
+    ["Templates",Number.isFinite(Number(values.features)) ? Number(values.features) : 0],
+    ["Support",Number.isFinite(Number(values.support)) ? Number(values.support) : 0],
+    ["Pricing",Number.isFinite(Number(values.pricing)) ? Number(values.pricing) : 0]
   ];
 
-  const cx=150, cy=150, radius=100;
-  const score100=getPostOverallScore(post);
+  const cx = 150;
+  const cy = 150;
+  const radius = 100;
 
-  const pointsFor = (r,index,value) => {
-    const angle=(-Math.PI/2)+(index*Math.PI*2/axes.length);
-    const scaled=r*Math.max(0,Math.min(10,Number(value)||0))/10;
-    return [cx+Math.cos(angle)*scaled,cy+Math.sin(angle)*scaled];
-  };
+  const points = axes.map((axis,index)=>{
+    const angle =
+      (-Math.PI / 2) +
+      (index * Math.PI * 2 / axes.length);
 
-  const polygon=axes.map((axis,index)=>{
-    const [x,y]=pointsFor(radius,index,axis[1]);
-    return `${x.toFixed(1)},${y.toFixed(1)}`;
-  }).join(" ");
+    const value = Math.max(0,Math.min(10,Number(axis[1])));
 
-  const rings=[20,40,60,80,100].map(r=>{
-    const pts=axes.map((_,index)=>{
-      const angle=(-Math.PI/2)+(index*Math.PI*2/axes.length);
-      return `${(cx+Math.cos(angle)*r).toFixed(1)},${(cy+Math.sin(angle)*r).toFixed(1)}`;
-    }).join(" ");
-    return `<polygon points="${pts}" fill="none" stroke="#cbd5e1" stroke-width="1"/>`;
-  }).join("");
+    const r = radius * value / 10;
+
+    return [
+      cx + Math.cos(angle) * r,
+      cy + Math.sin(angle) * r
+    ];
+  });
+
+  const polygon = points
+    .map(([x,y])=>`${x.toFixed(1)},${y.toFixed(1)}`)
+    .join(" ");
 
   return `
   <section class="review-radar">
-    <h2>Performance Profile <span class="radar-score">${score100}/100</span></h2>
-    <svg viewBox="0 0 300 300" role="img" aria-label="Performance Profile radar, overall score ${score100} out of 100">
-      ${rings}
+    <h2>Performance Profile</h2>
+
+    <svg viewBox="0 0 300 300"
+         role="img"
+         aria-label="Review performance radar chart">
+
+      <polygon
+        points="${polygon}"
+        fill="rgba(37,99,235,.18)"
+        stroke="#2563eb"
+        stroke-width="2"
+      />
+
       ${axes.map((axis,index)=>{
-        const angle=(-Math.PI/2)+(index*Math.PI*2/axes.length);
-        const x=cx+Math.cos(angle)*radius;
-        const y=cy+Math.sin(angle)*radius;
-        const tx=cx+Math.cos(angle)*(radius+20);
-        const ty=cy+Math.sin(angle)*(radius+20);
-        return `<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="#cbd5e1"/><text x="${tx}" y="${ty}" text-anchor="middle" font-size="10">${escapeHtml(axis[0])}</text>`;
+        const angle =
+          (-Math.PI / 2) +
+          (index * Math.PI * 2 / axes.length);
+
+        const x =
+          cx + Math.cos(angle) * radius;
+
+        const y =
+          cy + Math.sin(angle) * radius;
+
+        const tx =
+          cx + Math.cos(angle) * (radius + 20);
+
+        const ty =
+          cy + Math.sin(angle) * (radius + 20);
+
+        return `
+          <line
+            x1="${cx}"
+            y1="${cy}"
+            x2="${x}"
+            y2="${y}"
+            stroke="#cbd5e1"
+          />
+
+          <text
+            x="${tx}"
+            y="${ty}"
+            text-anchor="middle"
+            font-size="10"
+          >
+            ${escapeHtml(axis[0])}
+          </text>
+        `;
       }).join("")}
-      <polygon points="${polygon}" fill="rgba(37,99,235,.18)" stroke="#2563eb" stroke-width="2"/>
-      ${axes.map((axis,index)=>{
-        const [x,y]=pointsFor(radius,index,axis[1]);
-        return `<circle cx="${x}" cy="${y}" r="3" fill="#2563eb"/>`;
-      }).join("")}
+
     </svg>
-  </section>`;
+  </section>
+  `;
 }
 
 const FEED_URL =
 "https://honestproductreviewlab.blogspot.com/feeds/posts/default?alt=atom";
 
 import site from "./_data/site.json" with { type: "json" };
+import products from "./_data/products.json" with { type: "json" };
 import entities from "./_data/entities.json" with { type: "json" };
 import comparisonsData from "./_data/comparisons.json" with { type: "json" };
 import authors from "./_data/authors.json" with { type: "json" };
 import faqData from "./_data/faq.json" with { type: "json" };
+import reviewsData from "./_data/reviews.json" with { type: "json" };
 import glossary from "./_data/glossary.json" with { type: "json" };
-
-/* SOURCE DATA IS ENRICHMENT ONLY.
-   Blogger is the active-post source of truth. */
-function loadJson(path, fallback = []) {
-  try {
-    if (!fs.existsSync(path)) return fallback;
-    return JSON.parse(fs.readFileSync(path, "utf8"));
-  } catch (err) {
-    console.warn(`⚠ Could not load ${path}: ${err.message}`);
-    return fallback;
-  }
-}
-
-const products = loadJson("./_data/products.json", []);
-const reviewsData = loadJson("./_data/reviews.json", []);
-const versions = loadJson("./_data/versions.json", []);
+import versions from "./_data/versions.json" with { type: "json" };
 
 const SITE_URL = site.url;
 
@@ -1194,97 +1195,13 @@ const seenSlugs = new Set();
 
 const posts=[];
 
-/* =========================================================
-   FUTURE-PROOF PRODUCT DISCOVERY
-   Existing products.json entries enrich matching products.
-   New Blogger review products are inferred automatically.
-   ========================================================= */
-function inferProductData(title, content = "", category = "") {
-  const text = cleanText(content);
-  const titleText = cleanText(title);
-
-  const labeled = (label) => {
-    const re = new RegExp(`(?:${label})\\s*[:\\-]\\s*([^\\n|]+)`, "i");
-    const m = text.match(re);
-    return m?.[1]?.trim() || "";
-  };
-
-  const priceMatch =
-    text.match(/(?:Price|Pricing|Cost)\s*[:\-]\s*([^\n|<]{1,100})/i) ||
-    text.match(/(?:[$€£₦]\s*\d[\d,]*(?:\.\d{1,2})?(?:\s*\/\s*(?:month|mo|year|yr|week))?)/i);
-
-  const version = labeled("Product Version|Version");
-  const platformsRaw = labeled("Platforms?|Supported Platforms?");
-  const trialRaw = labeled("Trial");
-  const refundRaw = labeled("Refund|Refund Policy");
-  const website = labeled("Website|Official Website");
-  const brand = labeled("Brand");
-  const developer = labeled("Developer|Company|Maker");
-  const bestForRaw = labeled("Best For|Audience|Who Is It For");
-
-  const inferredName =
-    labeled("Product|Product Name|Tool") ||
-    titleText
-      .replace(/\b(honest|independent|ai|software|tool|review|2025|2026|2024|updated|tested|test|analysis|verdict|results|rating|worth it)\b/gi, " ")
-      .replace(/[-|:]+/g, " ")
-      .replace(/\s+/g, " ")
-      .trim() ||
-    titleText;
-
-  const slug = inferredName.toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
-
-  const price = priceMatch ? (priceMatch[1] || priceMatch[0]).trim() : "";
-
-  const keywords = Array.from(new Set(
-    `${titleText} ${category}`
-      .toLowerCase()
-      .replace(/[^a-z0-9\s-]/g, " ")
-      .split(/\s+/)
-      .filter(w => w.length >= 4)
-  )).slice(0, 15);
-
-  return {
-    slug,
-    name: inferredName,
-    brand: brand || inferredName,
-    developer,
-    category,
-    website,
-    price,
-    pricingModel: /\/(?:month|mo)/i.test(price)
-      ? "Subscription"
-      : (/one[- ]time/i.test(price) ? "One-time" : ""),
-    trial: /yes|true|free|day/i.test(trialRaw),
-    refund: /yes|true|day|money.?back/i.test(refundRaw),
-    rating: 0,
-    reviewed: true,
-    featured: false,
-    affiliate: "",
-    pros: [],
-    cons: [],
-    bestFor: bestForRaw ? bestForRaw.split(/,|\s+and\s+/).map(x=>x.trim()).filter(Boolean) : [],
-    avoidFor: [],
-    alternative: [],
-    features: [],
-    keywords,
-    audience: [],
-    useCases: [],
-    strengths: [],
-    lastUpdated: "",
-    version,
-    platforms: platformsRaw ? platformsRaw.split(/,|\s+\|\s+/).map(x=>x.trim()).filter(Boolean) : [],
-    performance: {}
-  };
-}
-
-function findExistingProduct(title, content = "") {
+function getProductData(title, content = "") {
 
   const searchText = `${title} ${content}`;
   const normalizedSearch = normalizeText(searchText);
 
-  return products.find(product => {
+  const product = products.find(product => {
+
     const productName = safeLower(product?.name);
     const productSlug = safeLower(product?.slug);
 
@@ -1299,17 +1216,12 @@ function findExistingProduct(title, content = "") {
       .filter(Boolean)
       .map(normalizeText);
 
-    return variations.some(v => normalizedSearch.includes(v));
-  }) || null;
-}
+    return variations.some(v =>
+      normalizedSearch.includes(v)
+    );
+  });
 
-function getProductData(title, content = "", category = "") {
-
-  const product = findExistingProduct(title, content);
-
-  if (!product) {
-    return inferProductData(title, content, category);
-  }
+  if (!product) return null;
 
   return {
     slug: product.slug || "",
@@ -1360,10 +1272,8 @@ function getProductData(title, content = "", category = "") {
 }
 
 function detectTopic(title, html) {
-  // 1. Use only existing product records for topic detection.
-  // Do not infer a new product here: supporting/non-review posts must
-  // never create synthetic product records during category detection.
-  const product = findExistingProduct(title, html);
+  // 1. First try the products database
+  const product = getProductData(title, html);
 
   if (product?.category) {
     return product.category;
@@ -1475,9 +1385,8 @@ Math.ceil(textOnly.split(/\s+/).length / 200)
 );
 /* SCHEMA */
 const wordCount = textOnly.split(/\s+/).length;
-const productMatch = getProductData(title, rawHtml, category);
+const productMatch = getProductData(title, rawHtml);
 const productInfo = productMatch || {};
-if(productInfo && !productInfo.category) productInfo.category = category;
 const structuredProsCons =
   extractStructuredProsCons(rawHtml, productInfo);
 
@@ -2052,7 +1961,7 @@ function generateComparison(postA, postB) {
       ${JSON.stringify(comparisonSchema)}
     </script>
 </head>
-<body data-post-slug="${escapeHtml(post.slug)}">
+<body data-post-slug="${escapeHtml(slug)}">
 ${globalHeader()}
 <div class="container comparison-page">
     <nav class="breadcrumb">
@@ -2074,44 +1983,44 @@ ${globalHeader()}
 
       <tr>
         <td>Speed</td>
-        <td>${"★".repeat(Math.round(getReviewDimensions(postA).easeOfUse || 0))}{"☆".repeat(Math.max(0,10-Math.round(getReviewDimensions(postA).easeOfUse || 0)))}</td>
-        <td>${"★".repeat(Math.round(getReviewDimensions(postB).easeOfUse || 0))}{"☆".repeat(Math.max(0,10-Math.round(getReviewDimensions(postB).easeOfUse || 0)))}</td>
+        <td>${"★".repeat(Math.round(postA.reviewScore?.easeOfUse || 5))}</td>
+        <td>${"★".repeat(Math.round(postB.reviewScore?.easeOfUse || 5))}</td>
       </tr>
 
       <tr>
         <td>AI Quality</td>
-        <td>${"★".repeat(Math.round(getReviewDimensions(postA).accuracy || 0))}{"☆".repeat(Math.max(0,10-Math.round(getReviewDimensions(postA).accuracy || 0)))}</td>
-        <td>${"★".repeat(Math.round(getReviewDimensions(postB).accuracy || 0))}{"☆".repeat(Math.max(0,10-Math.round(getReviewDimensions(postB).accuracy || 0)))}</td>
+        <td>${"★".repeat(Math.round(postA.reviewScore?.accuracy || 5))}</td>
+        <td>${"★".repeat(Math.round(postB.reviewScore?.accuracy || 5))}</td>
       </tr>
 
       <tr>
         <td>Templates</td>
-        <td>${"★".repeat(Math.round(getReviewDimensions(postA).features || 0))}{"☆".repeat(Math.max(0,10-Math.round(getReviewDimensions(postA).features || 0)))}</td>
-        <td>${"★".repeat(Math.round(getReviewDimensions(postB).features || 0))}{"☆".repeat(Math.max(0,10-Math.round(getReviewDimensions(postB).features || 0)))}</td>
+        <td>${"★".repeat(Math.round(postA.reviewScore?.features || 5))}</td>
+        <td>${"★".repeat(Math.round(postB.reviewScore?.features || 5))}</td>
       </tr>
 
       <tr>
         <td>Automation</td>
-        <td>${"★".repeat(Math.round(getReviewDimensions(postA).automation || 0))}{"☆".repeat(Math.max(0,10-Math.round(getReviewDimensions(postA).automation || 0)))}</td>
-        <td>${"★".repeat(Math.round(getReviewDimensions(postB).automation || 0))}{"☆".repeat(Math.max(0,10-Math.round(getReviewDimensions(postB).automation || 0)))}</td>
+        <td>${"★".repeat(Math.round(postA.reviewScore?.automation || 5))}</td>
+        <td>${"★".repeat(Math.round(postB.reviewScore?.automation || 5))}</td>
       </tr>
 
       <tr>
         <td>Support</td>
-        <td>${"★".repeat(Math.round(getReviewDimensions(postA).support || 0))}{"☆".repeat(Math.max(0,10-Math.round(getReviewDimensions(postA).support || 0)))}</td>
-        <td>${"★".repeat(Math.round(getReviewDimensions(postB).support || 0))}{"☆".repeat(Math.max(0,10-Math.round(getReviewDimensions(postB).support || 0)))}</td>
+        <td>${"★".repeat(Math.round(postA.reviewScore?.support || 5))}</td>
+        <td>${"★".repeat(Math.round(postB.reviewScore?.support || 5))}</td>
       </tr>
 
       <tr>
         <td>Pricing</td>
-        <td>${"★".repeat(Math.round(getReviewDimensions(postA).pricing || 0))}{"☆".repeat(Math.max(0,10-Math.round(getReviewDimensions(postA).pricing || 0)))}</td>
-        <td>${"★".repeat(Math.round(getReviewDimensions(postB).pricing || 0))}{"☆".repeat(Math.max(0,10-Math.round(getReviewDimensions(postB).pricing || 0)))}</td>
+        <td>${"★".repeat(Math.round(postA.reviewScore?.pricing || 5))}</td>
+        <td>${"★".repeat(Math.round(postB.reviewScore?.pricing || 5))}</td>
       </tr>
 
       <tr class="comparison-score-row">
         <td><strong>Overall Score</strong></td>
-        <td><strong>${getPostOverallScore(postA)}/100</strong></td>
-        <td><strong>${getPostOverallScore(postB)}/100</strong></td>
+        <td><strong>${postA.score?.score || 0}/100</strong></td>
+        <td><strong>${postB.score?.score || 0}/100</strong></td>
       </tr>
 
       <tr>
@@ -2425,56 +2334,6 @@ questions.push(match[1]);
 return questions.slice(0,4);
 }
 
-/* =========================================================
-   SUPPORTING-POST ROTATION
-   ========================================================= */
-function rotationSeed(slug = "") {
-  return Array.from(String(slug)).reduce((sum,ch)=>sum + ch.charCodeAt(0),0);
-}
-
-function rotatePool(pool, seed, limit) {
-  const source = safeArray(pool);
-  if(!source.length) return [];
-  const start = ((Number(seed) % source.length) + source.length) % source.length;
-  return [...source.slice(start), ...source.slice(0,start)]
-    .slice(0,Math.min(limit,source.length));
-}
-
-function getReviewPool(allPosts = posts) {
-  return safeArray(allPosts).filter(p => p?.isReview && p?.product && p?.url);
-}
-
-function getRotatingReviewTarget(currentPost, allPosts = posts, slot = "default") {
-  const pool = getReviewPool(allPosts);
-  if(!pool.length) return null;
-
-  const eligible = pool.length > 1
-    ? pool.filter(p => p.slug !== currentPost?.slug)
-    : pool;
-
-  const source = eligible.length ? eligible : pool;
-  const seed = rotationSeed(`${currentPost?.slug || "site"}:${slot}`);
-  return rotatePool(source, seed, 1)[0] || null;
-}
-
-function generateSupportingPosts(currentPost, allPosts, limit = 3) {
-  const candidates = safeArray(allPosts)
-    .filter(post => post.slug !== currentPost.slug && post.postType === "supporting")
-    .map(post => {
-      let score = 0;
-      if(post.category === currentPost.category) score += 50;
-      score += scoreSimilarity(
-        `${currentPost.title} ${currentPost.description}`,
-        `${post.title} ${post.description}`
-      ) * 6;
-      return {post,score};
-    })
-    .sort((a,b)=>b.score-a.score)
-    .map(x=>x.post);
-
-  return rotatePool(candidates,rotationSeed(currentPost.slug),limit);
-}
-
 /* BUILD POSTS */
 for(const post of posts){
 fs.mkdirSync(`_site/posts/${post.slug}`,{recursive:true});
@@ -2482,13 +2341,19 @@ fs.mkdirSync(`_site/posts/${post.slug}`,{recursive:true});
 /* SAFE RECOMMENDATION ENGINE */
 const { tocHtml, updatedHtml } = generateToC(post.html);
 const relatedPosts = generateRelatedReviews(post, posts).slice(0,4);
+let inlinePosts = generateRelatedReviews(post, posts)
+.filter(p=>!relatedPosts.some(r=>r.slug===p.slug))
+.slice(0,3);
 
-/* Continue Reading is supporting-post only and rotates per post. */
-const inlinePosts = generateSupportingPosts(post, posts, 3);
-
+/* HARD fallback — guarantees links always render */
+if(inlinePosts.length < 3){
+inlinePosts = posts
+.filter(p=>p.slug!==post.slug)
+.slice(0,3);
+}
 const inlineRecs = inlinePosts
-  .map(p=>`<li><a href="${p.url}" class="post-title">${p.title}</a></li>`)
-  .join("");
+.map(p=>`<li><a href="${p.url}" class="post-title">${p.title}</a></li>`)
+.join("");
 const related = relatedPosts
 .map(p=>`
 <li>
@@ -2538,11 +2403,9 @@ const breadcrumbSchema = `
 `;
 
 /* TOPIC CLUSTER BLOCK */
-const clusterPosts = rotatePool(
-  topics[post.category].filter(p=>p.isReview && p.slug!==post.slug),
-  rotationSeed(`${post.slug}:cluster`),
-  5
-);
+const clusterPosts = topics[post.category]
+  .filter(p=>p.slug!==post.slug)
+  .slice(0,5);
 const clusterBlock = clusterPosts.length ? `
 <section class="topic-cluster">
 <h3>Explore More ${formatCategoryTitle(post.category)}</h3>
@@ -2594,7 +2457,7 @@ ${breadcrumbSchema}
 <h1 class="overhead">${post.title}</h1>
 <div class="top-cta">
   <p><strong>🚀 Want the exact AI tool that’s making people money right now?</strong></p>
-  <a href="${getRotatingReviewTarget(post, posts, "top")?.url || SITE_URL + "/ai-tools/"}" class="cta-btn" data-cta-type="review-top">See #1 Tool →</a>
+  <a href="javascript:void(0)" class="cta-btn">See #1 Tool →</a>
 </div>
 <p class="sub">
 By <a href="${SITE_URL}/author/" rel="author">Justin Gerald</a> • ${post.readTime} min read
@@ -2619,7 +2482,7 @@ ${post.isReview ? generateBuyingGuide(post) : ""}
 
 <section class="mid-cta">
   <p><strong>Most AI tools are hype. This one actually converts.</strong></p>
-  <a href="${getRotatingReviewTarget(post, posts, "mid")?.url || SITE_URL + "/ai-tools/"}" class="cta-btn" data-cta-type="review-mid">See The Proven Tool →</a>
+  <a href="javascript:void(0)" class="cta-btn">See The Proven Tool →</a>
   <p class="mid-ctaa">
     Tested for real ROI — not just features.
   </p>
@@ -2665,7 +2528,7 @@ ${comp.title}
 `).join("")}
 </ul>
 <p><strong>Don’t want to compare everything?</strong></p>
-<a href="${getRotatingReviewTarget(post, posts, "comparison")?.url || SITE_URL + "/ai-tools/"}" class="cta-btn" data-cta-type="review-comparison">See Best Tool →</a>
+<a href="javascript:void(0)" class="cta-btn">See Best Tool →</a>
 </section>
 ` : ""}
 
@@ -2686,9 +2549,8 @@ Based on ReviewLab's current scoring and recommendation model.
 </p>
 
 <a
-  href="${getRotatingReviewTarget(post, posts, "recommended")?.url || SITE_URL + "/ai-tools/"}"
+  href="${topPosts[0]?.url || SITE_URL + "/ai-tools/"}"
   class="cta-btn"
-  data-cta-type="review-recommended"
 >
   View Current Recommendation →
 </a>
@@ -2707,7 +2569,7 @@ ${related}
 <div class="sidebar-card highlight sticky-main-cta">
   <h3>🚀 Start Making Money With This</h3>
   <p>Beginner-friendly system. No tech skills needed.</p>
-  <a href="${getRotatingReviewTarget(post, posts, "sidebar")?.url || SITE_URL + "/ai-tools/"}" class="sidebar-btn" data-cta-type="review-sidebar">Get Instant Access</a>
+  <a href="javascript:void(0)" class="sidebar-btn">Get Instant Access</a>
 </div>
 
 <!-- 2. SOCIAL PROOF -->
@@ -2805,92 +2667,67 @@ hover.classList.remove("hover-centered");
 });
 </script>
 <script>
-/* =========================================================
-   REVIEWLAB — PROFESSIONAL CTA ROTATOR
-   Review CTA slots -> reviews only.
-   Supporting slots -> supporting posts only.
-   ========================================================= */
-window.REVIEWLAB_CTA_POOLS = {
-  reviews: ${JSON.stringify(rankedRecommendations.map(item=>({title:item.post.title,url:item.post.url,score:getPostOverallScore(item.post)})))},
-  supporting: ${JSON.stringify(posts.filter(p=>p.postType === "supporting" && p.url).map(p=>({title:p.title,url:p.url,category:p.category})))},
-  current: ${JSON.stringify({slug:post.slug})}
-};
+window.addEventListener("load", function(){
+  // 1. Load the real post data from the backend
+  const postPool = ${ctaJson}; 
+  if (!postPool || postPool.length === 0) return;
 
-window.addEventListener("load",function(){
-  const pools=window.REVIEWLAB_CTA_POOLS || {};
-  const reviews=Array.isArray(pools.reviews)?pools.reviews:[];
-  const supporting=Array.isArray(pools.supporting)?pools.supporting:[];
-  const slug=String(pools.current?.slug || location.pathname);
+  // The #1 "Best Tool" is always the very first item in the list
+  const primaryPost = postPool[0];
 
-  function hash(value){
-    let h=2166136261;
-    for(let i=0;i<value.length;i++){
-      h^=value.charCodeAt(i);
-      h=Math.imul(h,16777619);
-    }
-    return h>>>0;
-  }
-  function pick(pool,slot,index=0){
-    if(!pool.length) return null;
-    return pool[hash(slug+":"+slot+":"+index)%pool.length];
-  }
-
-  document.querySelectorAll("[data-cta-type^=\"review-\"]").forEach((btn,index)=>{
-    const target=pick(reviews,btn.dataset.ctaType,index);
-    if(!target?.url) return;
-    btn.href=target.url;
-    if(btn.dataset.ctaType==="review-recommended"){
-      btn.textContent="View "+(target.title || "Current Recommendation")+" →";
+  // 2. PROFESSIONAL CTA ROTATOR
+  // This selects every button: top-cta, mid-cta, decision-cta, money-cta, and sidebar
+  const allButtons = document.querySelectorAll(".cta-btn, .sidebar-btn");
+  
+  allButtons.forEach((btn, index) => {
+    // We use the modulo (%) to cycle through the 5 posts 
+    // so every button on the page points to a DIFFERENT real review.
+    const assignedPost = postPool[index % postPool.length];
+    btn.setAttribute("href", assignedPost.url);
+    
+    // Optional: Update button text to be more specific if it's a generic button
+    if(btn.innerText.includes("See #1 Tool") || btn.innerText.includes("See Tool")) {
+       btn.innerHTML = \`Check Out \${assignedPost.title} →\`;
     }
   });
 
-  /* Continue Reading / Related Guides remain supporting-only. */
-  document.querySelectorAll(".related-guides-widget a, .internal-widget .internal-list a").forEach((link,index)=>{
-    const target=pick(supporting,"supporting",index);
-    if(target?.url) link.href=target.url;
-  });
-
-  /* Scrolling CTA was intentionally retained. */
-  const stroll=document.querySelector(".stroll-main-cta");
-  if(stroll){
-    const link=stroll.querySelector("a");
-    const target=pick(reviews,"review-scroll");
-    if(link && target){
-      link.href=target.url;
-      link.textContent="Top Choice: "+target.title+" →";
-    }
-    const update=()=>{
-      const max=Math.max(1,document.documentElement.scrollHeight-window.innerHeight);
-      stroll.classList.toggle("active",(window.scrollY/max)*100>=35);
-    };
-    window.addEventListener("scroll",update,{passive:true});
-    update();
-  }
-
-  /* Closing/exit popup retained and review-only. */
-  let popupShown=false;
-  document.addEventListener("mouseleave",function(e){
-    if(e.clientY>0 || popupShown || !reviews.length) return;
-    popupShown=true;
-    const target=pick(reviews,"review-exit");
-    if(!target?.url) return;
-
-    const popup=document.createElement("div");
-    popup.className="exit-popup-overlay";
-    popup.innerHTML=
-      '<div class="exit-popup">'+
-      '<h3>Don\'t Miss Our Recommendation</h3>'+
-      '<p>Our current review model recommends <strong>'+String(target.title||"this AI tool")+'</strong>.</p>'+
-      '<a href="'+target.url+'" class="cta-btn">Read Full Review →</a>'+
-      '<span class="close-popup" role="button" tabindex="0" aria-label="Close popup">✕</span>'+
-      '</div>';
-    document.body.appendChild(popup);
-    const close=()=>popup.remove();
-    popup.querySelector(".close-popup")?.addEventListener("click",close);
-    popup.querySelector(".close-popup")?.addEventListener("keydown",e=>{
-      if(e.key==="Enter" || e.key===" ") close();
+  // 3. SCROLLING CTA (Always points to the #1 Best performing post)
+  const strollCta = document.querySelector(".stroll-main-cta");
+  if(strollCta) {
+    window.addEventListener("scroll", function(){
+      const scrollPercent = (window.scrollY / document.body.scrollHeight) * 100;
+      if(scrollPercent > 35){
+         if(!strollCta.classList.contains("active")){
+            strollCta.classList.add("active");
+            const link = strollCta.querySelector("a");
+            if(link) {
+              link.href = primaryPost.url;
+              link.innerHTML = \`Top Choice: \${primaryPost.title} →\`;
+            }
+         }
+      } else {
+         strollCta.classList.remove("active");
+      }
     });
-    popup.addEventListener("click",e=>{ if(e.target===popup) close(); });
+  }
+
+  // 4. EXIT POPUP (Promotes the #1 Best performing post)
+  let popupShown = false;
+  document.addEventListener("mouseleave", function(e){
+    if(e.clientY > 0 || popupShown) return;
+    popupShown = true;
+    const popup = document.createElement("div");
+    popup.className = "exit-popup-overlay";
+    popup.innerHTML = \`
+      <div class="exit-popup">
+        <h3>Don't Miss Our #1 Recommendation</h3>
+        <p>Our testing shows <strong>\${primaryPost.title}</strong> is currently delivering the best results.</p>
+        <a href="\${primaryPost.url}" class="cta-btn">Read Full Review →</a>
+        <span class="close-popup">✕</span>
+      </div>\`;
+
+    document.body.appendChild(popup);
+    popup.querySelector(".close-popup").onclick = () => popup.remove();
   });
 });
 </script>
@@ -2898,7 +2735,7 @@ ${post.isReview ? `
 <div class="stroll-main-cta">
 <h3>🚀 Recommended Tool</h3>
 <p>Proven system beginners are using right now.</p>
-<a href="${getRotatingReviewTarget(post, posts, "scroll")?.url || SITE_URL + "/ai-tools/"}" class="cta-btn" data-cta-type="review-scroll">See Tool →</a>
+<a href="javascript:void(0)" class="cta-btn">See Tool →</a>
 </div>
 ` : ""}
 </body>
@@ -2981,7 +2818,7 @@ We test AI tools based on real-world performance, monetization potential, and wo
 <section class="money-cta">
 <h2>#1 Recommended AI Tool</h2>
 <p>Currently the highest-performing tool based on ROI and usability.</p>
-<a href="${(rotatePool(getReviewPool(posts),rotationSeed("ai-tools-home"),1)[0]?.url) || SITE_URL + "/ai-tools/"}" class="cta-btn">
+<a href="${SITE_URL}/ai-tools/ai-writing-tools/" class="cta-btn">
 See #1 Tool →
 </a>
 </section>
@@ -2995,8 +2832,8 @@ ${formatCategoryTitle(cat)}
 </a>
 </h3>
 <p>Explore top-performing tools in this category.</p>
-<a href="${(rotatePool(topics[cat].filter(p=>p.isReview),rotationSeed(`category-nav:${cat}`),1)[0]?.url) || `${SITE_URL}/ai-tools/${cat}/`}" class="cta-btn">
-Explore Reviewed Tools →
+<a href="${SITE_URL}/ai-tools/${cat}/" class="cta-btn">
+View Tools →
 </a>
 </div>
 `).join("")}
@@ -3026,8 +2863,8 @@ for (const topic in topics) {
   const topPicks =
     [...categoryPosts]
       .sort((a,b)=>
-        getPostOverallScore(b) -
-        getPostOverallScore(a)
+        Number(b.score?.score || 0) -
+        Number(a.score?.score || 0)
       )
       .slice(0,5);
 
@@ -3042,7 +2879,7 @@ for (const topic in topics) {
     topPicks[0];
 
   const comparisonCandidates =
-    topPicks.slice(0,2);
+    categoryPosts.slice(0,2);
 
   const comparisonHTML =
     comparisonCandidates.length >= 2
@@ -3069,13 +2906,13 @@ for (const topic in topics) {
               <tr>
                 <td>${label}</td>
                 ${comparisonCandidates.map(p=>{
-                  const value = Number(getReviewDimensions(p)[key] || 0);
+                  const value = Number(p.reviewScore?.[key] || 0);
                   return `<td>${value ? `${"★".repeat(Math.round(value))}${"☆".repeat(Math.max(0,10-Math.round(value)))}` : "Not scored"}</td>`;
                 }).join("")}
               </tr>`).join("")}
             <tr class="comparison-score-row">
               <td><strong>Overall Score</strong></td>
-              ${comparisonCandidates.map(p=>`<td><strong>${getPostOverallScore(p) ? `${getPostOverallScore(p)}/100` : "Pending"}</strong></td>`).join("")}
+              ${comparisonCandidates.map(p=>`<td><strong>${p.score?.score ? `${p.score.score}/100` : "Pending"}</strong></td>`).join("")}
             </tr>
           </tbody>
         </table>
@@ -3479,103 +3316,6 @@ ${authorPosts}
 `);
 fs.writeFileSync("_site/_data/posts.json",JSON.stringify(posts,null,2));
 
-/* =========================================================
-   AUTOMATIC DATA SNAPSHOTS
-   Blogger is authoritative for active posts.
-   Stale/unpublished records are removed every build.
-   Existing JSON fields are preserved as enrichment.
-   ========================================================= */
-function mergeByKey(existing,generated,key){
-  const map = new Map(
-    safeArray(existing)
-      .filter(item=>item && item[key])
-      .map(item=>[String(item[key]).toLowerCase(),item])
-  );
-
-  return safeArray(generated).map(item=>{
-    const k = String(item?.[key] || "").toLowerCase();
-    const old = map.get(k) || {};
-    return {...old,...item};
-  });
-}
-
-const generatedProducts = posts
-  .filter(p=>p.isReview && p.product?.name)
-  .map(p=>({
-    slug:p.product.slug || p.slug,
-    name:p.product.name || p.title,
-    brand:p.product.brand || p.product.name || p.title,
-    developer:p.product.developer || "",
-    category:p.category || "",
-    website:p.product.website || "",
-    price:p.product.price || "",
-    pricingModel:p.product.pricingModel || "",
-    trial:p.product.trial ?? false,
-    refund:p.product.refund ?? false,
-    rating:Number(p.product.rating || 0),
-    reviewed:true,
-    featured:!!p.product.featured,
-    affiliate:p.product.affiliate || "",
-    pros:safeArray(p.pros),
-    cons:safeArray(p.cons),
-    bestFor:safeArray(p.product.bestFor),
-    avoidFor:safeArray(p.product.avoidFor),
-    alternative:safeArray(p.product.alternative),
-    features:safeArray(p.product.features),
-    keywords:safeArray(p.product.keywords),
-    audience:safeArray(p.product.audience),
-    useCases:safeArray(p.product.useCases),
-    strengths:safeArray(p.product.strengths),
-    lastUpdated:p.product.lastUpdated || p.date || "",
-    version:p.product.version || "",
-    platforms:safeArray(p.product.platforms),
-    performance:p.product.performance || {}
-  }));
-
-const generatedReviews = posts
-  .filter(p=>p.isReview)
-  .map(p=>({
-    productSlug:p.product?.slug || p.slug,
-    reviewedBy:p.reviewData?.reviewedBy || "justin-gerald",
-    testDuration:p.reviewData?.testDuration || "",
-    platforms:safeArray(p.reviewData?.platforms?.length ? p.reviewData.platforms : p.product?.platforms),
-    methodology:safeArray(p.reviewData?.methodology),
-    scores:p.reviewScore || {},
-    score:p.score?.score || 0,
-    reviewScore:p.reviewScore || {},
-    pros:safeArray(p.pros),
-    cons:safeArray(p.cons)
-  }));
-
-const generatedVersions = posts
-  .filter(p=>p.isReview)
-  .map(p=>({
-    productSlug:p.product?.slug || p.slug,
-    history:safeArray(p.versionHistory).length
-      ? p.versionHistory
-      : (p.product?.version
-        ? [{
-            date:p.product.lastUpdated || p.date || "",
-            version:p.product.version,
-            changes:["Review generated from current Blogger content"]
-          }]
-        : [])
-  }));
-
-const activeProducts = mergeByKey(products,generatedProducts,"slug");
-const activeReviews = mergeByKey(reviewsData,generatedReviews,"productSlug");
-const activeVersions = mergeByKey(versions,generatedVersions,"productSlug");
-
-fs.writeFileSync("_site/_data/products.json",JSON.stringify(activeProducts,null,2));
-fs.writeFileSync("_site/_data/reviews.json",JSON.stringify(activeReviews,null,2));
-fs.writeFileSync("_site/_data/versions.json",JSON.stringify(activeVersions,null,2));
-
-/* Also synchronize the repository source snapshots so the local
-   _data directory does not require manual product maintenance. */
-fs.writeFileSync("_data/products.json",JSON.stringify(activeProducts,null,2));
-fs.writeFileSync("_data/reviews.json",JSON.stringify(activeReviews,null,2));
-fs.writeFileSync("_data/versions.json",JSON.stringify(activeVersions,null,2));
-
 const searchIndex = posts.map(p=>({
   title: p.title,
   url: p.url,
@@ -3607,10 +3347,9 @@ fs.copyFileSync("assets/og-default.jpg","_site/assets/og-default.jpg");
 fs.copyFileSync("assets/og-cta-tested.jpg","_site/assets/og-cta-tested.jpg");
 fs.copyFileSync("assets/email.js","_site/assets/email.js");
 
-/* Copy static authority data only.
-   Generated products/reviews/versions were already written above. */
-for(const dataFile of ["site.json","entities.json","comparisons.json","authors.json","faq.json","glossary.json"]){
-  const source = `_data/${dataFile}`;
+/* Copy authority data into the generated build */
+for(const dataFile of ["site.json","products.json","entities.json","comparisons.json","authors.json","faq.json","reviews.json","glossary.json","versions.json"]){
+  const source = dataFile === "site.json" ? `_data/${dataFile}` : `_data/${dataFile}`;
   if(fs.existsSync(source)) fs.copyFileSync(source, `_site/_data/${dataFile}`);
 }
 
