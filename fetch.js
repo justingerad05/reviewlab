@@ -2782,7 +2782,7 @@ window.addEventListener("load", function(){
     if(!target) return;
     btn.href = target.url;
     if(btn.closest('.top-cta') && btn.innerText.includes('See #1 Tool')){
-      btn.innerHTML = \`Check Out \${target.title} →\`;
+      btn.innerHTML = 'Check Out ' + target.title + ' →';
     }
   });
 
@@ -2800,7 +2800,7 @@ window.addEventListener("load", function(){
     const strollLink = strollCta.querySelector('a');
     if(strollLink){
       strollLink.href = strollTarget.url;
-      strolllink.innerHTML = \`Top Choice: \${primaryPost.title} →\`;
+      strollLink.innerHTML = 'Top Choice: ' + strollTarget.title + ' →';
     }
     window.addEventListener('scroll', function(){
       const scrollPercent = (window.scrollY / Math.max(1, document.body.scrollHeight - window.innerHeight)) * 100;
@@ -2816,13 +2816,13 @@ window.addEventListener("load", function(){
     const target = reviewTargets[(pageSeed + 5) % reviewTargets.length];
     const popup = document.createElement('div');
     popup.className = 'exit-popup-overlay';
-    popup.innerHTML = `
-      <div class="exit-popup">
-        <h3>Don't Miss Our Recommendation</h3>
-        <p>Our current review model recommends <strong>${target.title}</strong> for this page.</p>
-        <a href="${target.url}" class="cta-btn">Read Full Review →</a>
-        <span class="close-popup">✕</span>
-      </div>`;
+    popup.innerHTML =
+      '<div class="exit-popup">' +
+        '<h3>Don\'t Miss Our Recommendation</h3>' +
+        '<p>Our current review model recommends <strong>' + escapeHtml(target.title) + '</strong> for this page.</p>' +
+        '<a href="' + target.url + '" class="cta-btn">Read Full Review →</a>' +
+        '<span class="close-popup">✕</span>' +
+      '</div>';
     document.body.appendChild(popup);
     popup.querySelector('.close-popup').onclick = () => popup.remove();
     popup.addEventListener('click', e => { if(e.target === popup) popup.remove(); });
