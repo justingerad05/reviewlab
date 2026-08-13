@@ -2782,7 +2782,7 @@ window.addEventListener("load", function(){
     if(!target) return;
     btn.href = target.url;
     if(btn.closest('.top-cta') && btn.innerText.includes('See #1 Tool')){
-      btn.innerHTML = `Check Out ${target.title} →`;
+      btn.innerHTML = \`Check Out \${target.title} →\`;
     }
   });
 
@@ -2800,7 +2800,7 @@ window.addEventListener("load", function(){
     const strollLink = strollCta.querySelector('a');
     if(strollLink){
       strollLink.href = strollTarget.url;
-      strollLink.innerHTML = `Top Choice: ${strollTarget.title} →`;
+      strolllink.innerHTML = \`Top Choice: \${primaryPost.title} →\`;
     }
     window.addEventListener('scroll', function(){
       const scrollPercent = (window.scrollY / Math.max(1, document.body.scrollHeight - window.innerHeight)) * 100;
