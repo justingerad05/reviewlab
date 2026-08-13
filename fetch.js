@@ -1234,7 +1234,7 @@ function inferProductData(title, content = "", category = "") {
 
   const priceMatch =
     text.match(/(?:Price|Pricing|Cost)\\s*[:\\-]\\s*([^\\n|<]{1,100})/i) ||
-    text.match(/(?:[$€£₦]\\s*\\d[\\d,]*(?:\\.\\d{1,2})?(?:\\s*\\/\\s*(?:month|mo|year|yr|week))?)/i);
+    text.match(/(?:[$€£₦]\s*\d[\d,]*(?:\.\d{1,2})?(?:\s*\/\s*(?:month|mo|year|yr|week))?)/i);
 
   const version = labeled("Product Version|Version");
   const platformsRaw = labeled("Platforms?|Supported Platforms?");
@@ -2855,7 +2855,7 @@ window.addEventListener("load", function(){
       btn.textContent.includes("See Tool") ||
       btn.textContent.includes("View Current Recommendation")
     ){
-      btn.textContent = `Check Out ${target.title} →`;
+      btn.textContent = "Check Out " + target.title + " →";
     }
   });
 
@@ -2877,7 +2877,7 @@ window.addEventListener("load", function(){
 
     if(link && target){
       link.href = target.url;
-      link.textContent = `Top Choice: ${target.title} →`;
+      link.textContent = "Top Choice: " + target.title + " →";
     }
 
     const updateStroll = () => {
@@ -2901,13 +2901,13 @@ window.addEventListener("load", function(){
 
     const popup = document.createElement("div");
     popup.className = "exit-popup-overlay";
-    popup.innerHTML = `
-      <div class="exit-popup">
-        <h3>Don't Miss Our Recommendation</h3>
-        <p>Our current review model recommends <strong>${target.title}</strong> for this page.</p>
-        <a href="${target.url}" class="cta-btn">Read Full Review →</a>
-        <span class="close-popup">✕</span>
-      </div>`;
+    popup.innerHTML =
+      "<div class=\"exit-popup\">" +
+      "<h3>Don't Miss Our Recommendation</h3>" +
+      "<p>Our current review model recommends <strong>" + escapeHtml(target.title) + "</strong> for this page.</p>" +
+      "<a href=\"" + target.url + "\" class=\"cta-btn\">Read Full Review →</a>" +
+      "<span class=\"close-popup\">✕</span>" +
+      "</div>";
 
     document.body.appendChild(popup);
 
