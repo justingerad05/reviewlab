@@ -55,14 +55,18 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 });
 
-function getRotatingReviewTarget() {
+function getRotatingReviewTarget(slot = "email-popup") {
   const pool = window.REVIEWLAB_CTA_POOLS?.reviews || [];
   if (!pool.length) return null;
 
-  const seed = Array.from(location.pathname)
-    .reduce((n, ch) => n + ch.charCodeAt(0), 0);
+  let hash = 2166136261;
+  const seed = location.pathname + ":" + slot;
+  for (const ch of seed) {
+    hash ^= ch.charCodeAt(0);
+    hash = Math.imul(hash, 16777619);
+  }
 
-  return pool[seed % pool.length] || pool[0];
+  return pool[(hash >>> 0) % pool.length] || pool[0];
 }
 
 function escapePopupHtml(value = "") {
@@ -97,7 +101,7 @@ function showPopup(source, email) {
     `;
   }
 
-  const reviewTarget = getRotatingReviewTarget();
+  const reviewTarget = getRotatingReviewTarget("email-popup");
 
   const reviewCta = reviewTarget ? `
     <a href="${reviewTarget.url}"
