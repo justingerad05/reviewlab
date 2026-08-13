@@ -804,8 +804,8 @@ function getWidgetProducts(posts){
 
     bestValue: [...reviews]
       .sort((a,b)=>
-        Number(b.score?.score || 0) -
-        Number(a.score?.score || 0)
+        getPostOverallScore(b) -
+        getPostOverallScore(a)
       ).slice(0,5),
 
     mostPopular: reviews.slice(0,5)
@@ -844,107 +844,84 @@ function generateDynamicSidebar(posts){
    RADAR SVG
    ========================================================= */
 
+function getReviewDimensions(post) {
+  const source = post?.score?.reviewScore || post?.reviewScore || {};
+  const reviewData = post?.reviewData?.scores || {};
+  const product = post?.product?.reviewScore || {};
+  const keys = ["easeOfUse", "accuracy", "automation", "features", "support", "pricing"];
+
+  return Object.fromEntries(keys.map(key => {
+    const values = [source[key], reviewData[key], product[key]].map(Number);
+    const value = values.find(v => Number.isFinite(v));
+    return [key, Number.isFinite(value) ? Math.max(0, Math.min(10, value)) : 0];
+  }));
+}
+
+function getPostOverallScore(post) {
+  const direct = Number(post?.score?.score);
+  if(Number.isFinite(direct) && direct > 0) return Math.round(direct);
+
+  const values = Object.values(getReviewDimensions(post)).filter(v => Number.isFinite(v) && v > 0);
+  return values.length
+    ? Math.round((values.reduce((a,b)=>a+b,0) / values.length) * 10)
+    : 0;
+}
+
 function generateRadarChart(post){
-  if(!post.isReview) return "";
+  if(!post?.isReview) return "";
 
-  const values = post.score?.reviewScore || {};
-
+  const values = getReviewDimensions(post);
   const axes = [
-    ["Speed",Number.isFinite(Number(values.easeOfUse)) ? Number(values.easeOfUse) : 0],
-    ["Accuracy",Number.isFinite(Number(values.accuracy)) ? Number(values.accuracy) : 0],
-    ["Automation",Number.isFinite(Number(values.automation)) ? Number(values.automation) : 0],
-    ["Templates",Number.isFinite(Number(values.features)) ? Number(values.features) : 0],
-    ["Support",Number.isFinite(Number(values.support)) ? Number(values.support) : 0],
-    ["Pricing",Number.isFinite(Number(values.pricing)) ? Number(values.pricing) : 0]
+    ["Speed",values.easeOfUse],
+    ["Accuracy",values.accuracy],
+    ["Automation",values.automation],
+    ["Templates",values.features],
+    ["Support",values.support],
+    ["Pricing",values.pricing]
   ];
 
-  const cx = 150;
-  const cy = 150;
-  const radius = 100;
+  const cx=150, cy=150, radius=100;
+  const score100=getPostOverallScore(post);
 
-  const points = axes.map((axis,index)=>{
-    const angle =
-      (-Math.PI / 2) +
-      (index * Math.PI * 2 / axes.length);
+  const pointsFor = (r,index,value) => {
+    const angle=(-Math.PI/2)+(index*Math.PI*2/axes.length);
+    const scaled=r*Math.max(0,Math.min(10,Number(value)||0))/10;
+    return [cx+Math.cos(angle)*scaled,cy+Math.sin(angle)*scaled];
+  };
 
-    const value = Math.max(0,Math.min(10,Number(axis[1])));
+  const polygon=axes.map((axis,index)=>{
+    const [x,y]=pointsFor(radius,index,axis[1]);
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(" ");
 
-    const r = radius * value / 10;
-
-    return [
-      cx + Math.cos(angle) * r,
-      cy + Math.sin(angle) * r
-    ];
-  });
-
-  const polygon = points
-    .map(([x,y])=>`${x.toFixed(1)},${y.toFixed(1)}`)
-    .join(" ");
+  const rings=[20,40,60,80,100].map(r=>{
+    const pts=axes.map((_,index)=>{
+      const angle=(-Math.PI/2)+(index*Math.PI*2/axes.length);
+      return `${(cx+Math.cos(angle)*r).toFixed(1)},${(cy+Math.sin(angle)*r).toFixed(1)}`;
+    }).join(" ");
+    return `<polygon points="${pts}" fill="none" stroke="#cbd5e1" stroke-width="1"/>`;
+  }).join("");
 
   return `
   <section class="review-radar">
-    <h2>Performance Profile</h2>
-
-    <svg viewBox="0 0 300 300"
-         role="img"
-         aria-label="Review performance radar chart">
-
-      ${[1,0.75,0.5,0.25].map(scale=>{
-        const ringPoints = axes.map((axis,index)=>{
-          const angle = (-Math.PI / 2) + (index * Math.PI * 2 / axes.length);
-          const r = radius * scale;
-          return `${(cx + Math.cos(angle)*r).toFixed(1)},${(cy + Math.sin(angle)*r).toFixed(1)}`;
-        }).join(" ");
-        return `<polygon points="${ringPoints}" fill="none" stroke="#475569" stroke-width="1" opacity=".55" />`;
-      }).join("")}
-
-      <polygon
-        points="${polygon}"
-        fill="rgba(37,99,235,.18)"
-        stroke="#2563eb"
-        stroke-width="2"
-      />
-
+    <h2>Performance Profile <span class="radar-score">${score100}/100</span></h2>
+    <svg viewBox="0 0 300 300" role="img" aria-label="Performance Profile radar, overall score ${score100} out of 100">
+      ${rings}
       ${axes.map((axis,index)=>{
-        const angle =
-          (-Math.PI / 2) +
-          (index * Math.PI * 2 / axes.length);
-
-        const x =
-          cx + Math.cos(angle) * radius;
-
-        const y =
-          cy + Math.sin(angle) * radius;
-
-        const tx =
-          cx + Math.cos(angle) * (radius + 20);
-
-        const ty =
-          cy + Math.sin(angle) * (radius + 20);
-
-        return `
-          <line
-            x1="${cx}"
-            y1="${cy}"
-            x2="${x}"
-            y2="${y}"
-            stroke="#cbd5e1"
-          />
-
-          <text
-            x="${tx}"
-            y="${ty}"
-            text-anchor="middle"
-            font-size="10"
-          >
-            ${escapeHtml(axis[0])}
-          </text>
-        `;
+        const angle=(-Math.PI/2)+(index*Math.PI*2/axes.length);
+        const x=cx+Math.cos(angle)*radius;
+        const y=cy+Math.sin(angle)*radius;
+        const tx=cx+Math.cos(angle)*(radius+20);
+        const ty=cy+Math.sin(angle)*(radius+20);
+        return `<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="#cbd5e1"/><text x="${tx}" y="${ty}" text-anchor="middle" font-size="10">${escapeHtml(axis[0])}</text>`;
       }).join("")}
-
+      <polygon points="${polygon}" fill="rgba(37,99,235,.18)" stroke="#2563eb" stroke-width="2"/>
+      ${axes.map((axis,index)=>{
+        const [x,y]=pointsFor(radius,index,axis[1]);
+        return `<circle cx="${x}" cy="${y}" r="3" fill="#2563eb"/>`;
+      }).join("")}
     </svg>
-  </section>
-  `;
+  </section>`;
 }
 
 const FEED_URL =
@@ -2075,7 +2052,7 @@ function generateComparison(postA, postB) {
       ${JSON.stringify(comparisonSchema)}
     </script>
 </head>
-<body>
+<body data-post-slug="${escapeHtml(post.slug)}">
 ${globalHeader()}
 <div class="container comparison-page">
     <nav class="breadcrumb">
@@ -2097,44 +2074,44 @@ ${globalHeader()}
 
       <tr>
         <td>Speed</td>
-        <td>${"★".repeat(Math.round(postA.reviewScore?.easeOfUse || 5))}</td>
-        <td>${"★".repeat(Math.round(postB.reviewScore?.easeOfUse || 5))}</td>
+        <td>${"★".repeat(Math.round(getReviewDimensions(postA).easeOfUse || 0))}{"☆".repeat(Math.max(0,10-Math.round(getReviewDimensions(postA).easeOfUse || 0)))}</td>
+        <td>${"★".repeat(Math.round(getReviewDimensions(postB).easeOfUse || 0))}{"☆".repeat(Math.max(0,10-Math.round(getReviewDimensions(postB).easeOfUse || 0)))}</td>
       </tr>
 
       <tr>
         <td>AI Quality</td>
-        <td>${"★".repeat(Math.round(postA.reviewScore?.accuracy || 5))}</td>
-        <td>${"★".repeat(Math.round(postB.reviewScore?.accuracy || 5))}</td>
+        <td>${"★".repeat(Math.round(getReviewDimensions(postA).accuracy || 0))}{"☆".repeat(Math.max(0,10-Math.round(getReviewDimensions(postA).accuracy || 0)))}</td>
+        <td>${"★".repeat(Math.round(getReviewDimensions(postB).accuracy || 0))}{"☆".repeat(Math.max(0,10-Math.round(getReviewDimensions(postB).accuracy || 0)))}</td>
       </tr>
 
       <tr>
         <td>Templates</td>
-        <td>${"★".repeat(Math.round(postA.reviewScore?.features || 5))}</td>
-        <td>${"★".repeat(Math.round(postB.reviewScore?.features || 5))}</td>
+        <td>${"★".repeat(Math.round(getReviewDimensions(postA).features || 0))}{"☆".repeat(Math.max(0,10-Math.round(getReviewDimensions(postA).features || 0)))}</td>
+        <td>${"★".repeat(Math.round(getReviewDimensions(postB).features || 0))}{"☆".repeat(Math.max(0,10-Math.round(getReviewDimensions(postB).features || 0)))}</td>
       </tr>
 
       <tr>
         <td>Automation</td>
-        <td>${"★".repeat(Math.round(postA.reviewScore?.automation || 5))}</td>
-        <td>${"★".repeat(Math.round(postB.reviewScore?.automation || 5))}</td>
+        <td>${"★".repeat(Math.round(getReviewDimensions(postA).automation || 0))}{"☆".repeat(Math.max(0,10-Math.round(getReviewDimensions(postA).automation || 0)))}</td>
+        <td>${"★".repeat(Math.round(getReviewDimensions(postB).automation || 0))}{"☆".repeat(Math.max(0,10-Math.round(getReviewDimensions(postB).automation || 0)))}</td>
       </tr>
 
       <tr>
         <td>Support</td>
-        <td>${"★".repeat(Math.round(postA.reviewScore?.support || 5))}</td>
-        <td>${"★".repeat(Math.round(postB.reviewScore?.support || 5))}</td>
+        <td>${"★".repeat(Math.round(getReviewDimensions(postA).support || 0))}{"☆".repeat(Math.max(0,10-Math.round(getReviewDimensions(postA).support || 0)))}</td>
+        <td>${"★".repeat(Math.round(getReviewDimensions(postB).support || 0))}{"☆".repeat(Math.max(0,10-Math.round(getReviewDimensions(postB).support || 0)))}</td>
       </tr>
 
       <tr>
         <td>Pricing</td>
-        <td>${"★".repeat(Math.round(postA.reviewScore?.pricing || 5))}</td>
-        <td>${"★".repeat(Math.round(postB.reviewScore?.pricing || 5))}</td>
+        <td>${"★".repeat(Math.round(getReviewDimensions(postA).pricing || 0))}{"☆".repeat(Math.max(0,10-Math.round(getReviewDimensions(postA).pricing || 0)))}</td>
+        <td>${"★".repeat(Math.round(getReviewDimensions(postB).pricing || 0))}{"☆".repeat(Math.max(0,10-Math.round(getReviewDimensions(postB).pricing || 0)))}</td>
       </tr>
 
       <tr class="comparison-score-row">
         <td><strong>Overall Score</strong></td>
-        <td><strong>${postA.score?.score || 0}/100</strong></td>
-        <td><strong>${postB.score?.score || 0}/100</strong></td>
+        <td><strong>${getPostOverallScore(postA)}/100</strong></td>
+        <td><strong>${getPostOverallScore(postB)}/100</strong></td>
       </tr>
 
       <tr>
@@ -2463,6 +2440,23 @@ function rotatePool(pool, seed, limit) {
     .slice(0,Math.min(limit,source.length));
 }
 
+function getReviewPool(allPosts = posts) {
+  return safeArray(allPosts).filter(p => p?.isReview && p?.product && p?.url);
+}
+
+function getRotatingReviewTarget(currentPost, allPosts = posts, slot = "default") {
+  const pool = getReviewPool(allPosts);
+  if(!pool.length) return null;
+
+  const eligible = pool.length > 1
+    ? pool.filter(p => p.slug !== currentPost?.slug)
+    : pool;
+
+  const source = eligible.length ? eligible : pool;
+  const seed = rotationSeed(`${currentPost?.slug || "site"}:${slot}`);
+  return rotatePool(source, seed, 1)[0] || null;
+}
+
 function generateSupportingPosts(currentPost, allPosts, limit = 3) {
   const candidates = safeArray(allPosts)
     .filter(post => post.slug !== currentPost.slug && post.postType === "supporting")
@@ -2544,9 +2538,11 @@ const breadcrumbSchema = `
 `;
 
 /* TOPIC CLUSTER BLOCK */
-const clusterPosts = topics[post.category]
-  .filter(p=>p.slug!==post.slug)
-  .slice(0,5);
+const clusterPosts = rotatePool(
+  topics[post.category].filter(p=>p.isReview && p.slug!==post.slug),
+  rotationSeed(`${post.slug}:cluster`),
+  5
+);
 const clusterBlock = clusterPosts.length ? `
 <section class="topic-cluster">
 <h3>Explore More ${formatCategoryTitle(post.category)}</h3>
@@ -2598,7 +2594,7 @@ ${breadcrumbSchema}
 <h1 class="overhead">${post.title}</h1>
 <div class="top-cta">
   <p><strong>🚀 Want the exact AI tool that’s making people money right now?</strong></p>
-  <a href="javascript:void(0)" class="cta-btn">See #1 Tool →</a>
+  <a href="${getRotatingReviewTarget(post, posts, "top")?.url || SITE_URL + "/ai-tools/"}" class="cta-btn" data-cta-type="review-top">See #1 Tool →</a>
 </div>
 <p class="sub">
 By <a href="${SITE_URL}/author/" rel="author">Justin Gerald</a> • ${post.readTime} min read
@@ -2623,7 +2619,7 @@ ${post.isReview ? generateBuyingGuide(post) : ""}
 
 <section class="mid-cta">
   <p><strong>Most AI tools are hype. This one actually converts.</strong></p>
-  <a href="javascript:void(0)" class="cta-btn">See The Proven Tool →</a>
+  <a href="${getRotatingReviewTarget(post, posts, "mid")?.url || SITE_URL + "/ai-tools/"}" class="cta-btn" data-cta-type="review-mid">See The Proven Tool →</a>
   <p class="mid-ctaa">
     Tested for real ROI — not just features.
   </p>
@@ -2669,7 +2665,7 @@ ${comp.title}
 `).join("")}
 </ul>
 <p><strong>Don’t want to compare everything?</strong></p>
-<a href="javascript:void(0)" class="cta-btn">See Best Tool →</a>
+<a href="${getRotatingReviewTarget(post, posts, "comparison")?.url || SITE_URL + "/ai-tools/"}" class="cta-btn" data-cta-type="review-comparison">See Best Tool →</a>
 </section>
 ` : ""}
 
@@ -2690,8 +2686,9 @@ Based on ReviewLab's current scoring and recommendation model.
 </p>
 
 <a
-  href="${topPosts[0]?.url || SITE_URL + "/ai-tools/"}"
+  href="${getRotatingReviewTarget(post, posts, "recommended")?.url || SITE_URL + "/ai-tools/"}"
   class="cta-btn"
+  data-cta-type="review-recommended"
 >
   View Current Recommendation →
 </a>
@@ -2710,7 +2707,7 @@ ${related}
 <div class="sidebar-card highlight sticky-main-cta">
   <h3>🚀 Start Making Money With This</h3>
   <p>Beginner-friendly system. No tech skills needed.</p>
-  <a href="javascript:void(0)" class="sidebar-btn">Get Instant Access</a>
+  <a href="${getRotatingReviewTarget(post, posts, "sidebar")?.url || SITE_URL + "/ai-tools/"}" class="sidebar-btn" data-cta-type="review-sidebar">Get Instant Access</a>
 </div>
 
 <!-- 2. SOCIAL PROOF -->
@@ -2809,117 +2806,91 @@ hover.classList.remove("hover-centered");
 </script>
 <script>
 /* =========================================================
-   REVIEWLAB — UNIFIED CTA / SUPPORTING ROTATOR
-   Review CTAs -> reviews only.
-   Supporting/internal CTAs -> supporting posts only.
+   REVIEWLAB — PROFESSIONAL CTA ROTATOR
+   Review CTA slots -> reviews only.
+   Supporting slots -> supporting posts only.
    ========================================================= */
 window.REVIEWLAB_CTA_POOLS = {
-  reviews: ${JSON.stringify(rankedRecommendations.map(item=>({
-    title:item.post.title,
-    url:item.post.url,
-    score:item.post.score?.score || 0
-  })))},
-  supporting: ${JSON.stringify(posts.filter(p=>p.postType === "supporting").map(p=>({
-    title:p.title,
-    url:p.url,
-    category:p.category
-  })))}
+  reviews: ${JSON.stringify(rankedRecommendations.map(item=>({title:item.post.title,url:item.post.url,score:getPostOverallScore(item.post)})))},
+  supporting: ${JSON.stringify(posts.filter(p=>p.postType === "supporting" && p.url).map(p=>({title:p.title,url:p.url,category:p.category})))},
+  current: ${JSON.stringify({slug:post.slug})}
 };
 
-window.addEventListener("load", function(){
-  const reviewPool = window.REVIEWLAB_CTA_POOLS.reviews || [];
-  const supportingPool = window.REVIEWLAB_CTA_POOLS.supporting || [];
+window.addEventListener("load",function(){
+  const pools=window.REVIEWLAB_CTA_POOLS || {};
+  const reviews=Array.isArray(pools.reviews)?pools.reviews:[];
+  const supporting=Array.isArray(pools.supporting)?pools.supporting:[];
+  const slug=String(pools.current?.slug || location.pathname);
 
-  const seed = Array.from(location.pathname)
-    .reduce((n,ch)=>n + ch.charCodeAt(0),0);
-
-  const rotate = (pool,offset=0) =>
-    pool.length ? pool[(seed + offset) % pool.length] : null;
-
-  /* REVIEW-ONLY CTA POOL */
-  const reviewButtons = document.querySelectorAll(
-    ".top-cta .cta-btn, " +
-    ".mid-cta .cta-btn, " +
-    ".comparison-block .cta-btn, " +
-    ".money-cta .cta-btn, " +
-    ".sticky-main-cta .sidebar-btn, " +
-    ".stroll-main-cta .cta-btn"
-  );
-
-  reviewButtons.forEach((btn,index)=>{
-    const target = rotate(reviewPool,index + 1);
-    if(!target) return;
-
-    btn.href = target.url;
-
-    if(
-      btn.textContent.includes("See #1 Tool") ||
-      btn.textContent.includes("See The Proven Tool") ||
-      btn.textContent.includes("See Best Tool") ||
-      btn.textContent.includes("See Tool") ||
-      btn.textContent.includes("View Current Recommendation")
-    ){
-      btn.textContent = "Check Out " + target.title + " →";
+  function hash(value){
+    let h=2166136261;
+    for(let i=0;i<value.length;i++){
+      h^=value.charCodeAt(i);
+      h=Math.imul(h,16777619);
     }
-  });
-
-  /* SUPPORTING-ONLY INTERNAL CTA LINKS */
-  const supportingLinks = document.querySelectorAll(
-    ".related-guides a, .internal-widget .internal-list a"
-  );
-
-  supportingLinks.forEach((link,index)=>{
-    const target = rotate(supportingPool,index + 7);
-    if(target) link.href = target.url;
-  });
-
-  /* STROLLING CTA — REVIEW ONLY */
-  const strollCta = document.querySelector(".stroll-main-cta");
-  if(strollCta){
-    const target = rotate(reviewPool,3);
-    const link = strollCta.querySelector("a");
-
-    if(link && target){
-      link.href = target.url;
-      link.textContent = "Top Choice: " + target.title + " →";
-    }
-
-    const updateStroll = () => {
-      const max = Math.max(1,document.body.scrollHeight-window.innerHeight);
-      strollCta.classList.toggle("active",(window.scrollY/max)*100 > 35);
-    };
-
-    window.addEventListener("scroll",updateStroll,{passive:true});
-    updateStroll();
+    return h>>>0;
+  }
+  function pick(pool,slot,index=0){
+    if(!pool.length) return null;
+    return pool[hash(slug+":"+slot+":"+index)%pool.length];
   }
 
-  /* EXIT POPUP — REVIEW ONLY, INDEPENDENTLY ROTATED */
-  let popupShown = false;
+  document.querySelectorAll("[data-cta-type^=\"review-\"]").forEach((btn,index)=>{
+    const target=pick(reviews,btn.dataset.ctaType,index);
+    if(!target?.url) return;
+    btn.href=target.url;
+    if(btn.dataset.ctaType==="review-recommended"){
+      btn.textContent="View "+(target.title || "Current Recommendation")+" →";
+    }
+  });
 
+  /* Continue Reading / Related Guides remain supporting-only. */
+  document.querySelectorAll(".related-guides-widget a, .internal-widget .internal-list a").forEach((link,index)=>{
+    const target=pick(supporting,"supporting",index);
+    if(target?.url) link.href=target.url;
+  });
+
+  /* Scrolling CTA was intentionally retained. */
+  const stroll=document.querySelector(".stroll-main-cta");
+  if(stroll){
+    const link=stroll.querySelector("a");
+    const target=pick(reviews,"review-scroll");
+    if(link && target){
+      link.href=target.url;
+      link.textContent="Top Choice: "+target.title+" →";
+    }
+    const update=()=>{
+      const max=Math.max(1,document.documentElement.scrollHeight-window.innerHeight);
+      stroll.classList.toggle("active",(window.scrollY/max)*100>=35);
+    };
+    window.addEventListener("scroll",update,{passive:true});
+    update();
+  }
+
+  /* Closing/exit popup retained and review-only. */
+  let popupShown=false;
   document.addEventListener("mouseleave",function(e){
-    if(e.clientY > 0 || popupShown || !reviewPool.length) return;
+    if(e.clientY>0 || popupShown || !reviews.length) return;
+    popupShown=true;
+    const target=pick(reviews,"review-exit");
+    if(!target?.url) return;
 
-    popupShown = true;
-    const target = rotate(reviewPool,5);
-    if(!target) return;
-
-    const popup = document.createElement("div");
-    popup.className = "exit-popup-overlay";
-    popup.innerHTML =
-      "<div class=\"exit-popup\">" +
-      "<h3>Don't Miss Our Recommendation</h3>" +
-      "<p>Our current review model recommends <strong>" + target.title + "</strong> for this page.</p>" +
-      "<a href=\"" + target.url + "\" class=\"cta-btn\">Read Full Review →</a>" +
-      "<span class=\"close-popup\">✕</span>" +
-      "</div>";
-
+    const popup=document.createElement("div");
+    popup.className="exit-popup-overlay";
+    popup.innerHTML=
+      '<div class="exit-popup">'+
+      '<h3>Don\'t Miss Our Recommendation</h3>'+
+      '<p>Our current review model recommends <strong>'+String(target.title||"this AI tool")+'</strong>.</p>'+
+      '<a href="'+target.url+'" class="cta-btn">Read Full Review →</a>'+
+      '<span class="close-popup" role="button" tabindex="0" aria-label="Close popup">✕</span>'+
+      '</div>';
     document.body.appendChild(popup);
-
-    popup.querySelector(".close-popup").onclick = () => popup.remove();
-
-    popup.addEventListener("click",e=>{
-      if(e.target === popup) popup.remove();
+    const close=()=>popup.remove();
+    popup.querySelector(".close-popup")?.addEventListener("click",close);
+    popup.querySelector(".close-popup")?.addEventListener("keydown",e=>{
+      if(e.key==="Enter" || e.key===" ") close();
     });
+    popup.addEventListener("click",e=>{ if(e.target===popup) close(); });
   });
 });
 </script>
@@ -2927,7 +2898,7 @@ ${post.isReview ? `
 <div class="stroll-main-cta">
 <h3>🚀 Recommended Tool</h3>
 <p>Proven system beginners are using right now.</p>
-<a href="javascript:void(0)" class="cta-btn">See Tool →</a>
+<a href="${getRotatingReviewTarget(post, posts, "scroll")?.url || SITE_URL + "/ai-tools/"}" class="cta-btn" data-cta-type="review-scroll">See Tool →</a>
 </div>
 ` : ""}
 </body>
@@ -3010,7 +2981,7 @@ We test AI tools based on real-world performance, monetization potential, and wo
 <section class="money-cta">
 <h2>#1 Recommended AI Tool</h2>
 <p>Currently the highest-performing tool based on ROI and usability.</p>
-<a href="${SITE_URL}/ai-tools/ai-writing-tools/" class="cta-btn">
+<a href="${(rotatePool(getReviewPool(posts),rotationSeed("ai-tools-home"),1)[0]?.url) || SITE_URL + "/ai-tools/"}" class="cta-btn">
 See #1 Tool →
 </a>
 </section>
@@ -3024,8 +2995,8 @@ ${formatCategoryTitle(cat)}
 </a>
 </h3>
 <p>Explore top-performing tools in this category.</p>
-<a href="${SITE_URL}/ai-tools/${cat}/" class="cta-btn">
-View Tools →
+<a href="${(rotatePool(topics[cat].filter(p=>p.isReview),rotationSeed(`category-nav:${cat}`),1)[0]?.url) || `${SITE_URL}/ai-tools/${cat}/`}" class="cta-btn">
+Explore Reviewed Tools →
 </a>
 </div>
 `).join("")}
@@ -3055,8 +3026,8 @@ for (const topic in topics) {
   const topPicks =
     [...categoryPosts]
       .sort((a,b)=>
-        Number(b.score?.score || 0) -
-        Number(a.score?.score || 0)
+        getPostOverallScore(b) -
+        getPostOverallScore(a)
       )
       .slice(0,5);
 
@@ -3071,7 +3042,7 @@ for (const topic in topics) {
     topPicks[0];
 
   const comparisonCandidates =
-    categoryPosts.slice(0,2);
+    topPicks.slice(0,2);
 
   const comparisonHTML =
     comparisonCandidates.length >= 2
@@ -3098,13 +3069,13 @@ for (const topic in topics) {
               <tr>
                 <td>${label}</td>
                 ${comparisonCandidates.map(p=>{
-                  const value = Number(p.reviewScore?.[key] || 0);
+                  const value = Number(getReviewDimensions(p)[key] || 0);
                   return `<td>${value ? `${"★".repeat(Math.round(value))}${"☆".repeat(Math.max(0,10-Math.round(value)))}` : "Not scored"}</td>`;
                 }).join("")}
               </tr>`).join("")}
             <tr class="comparison-score-row">
               <td><strong>Overall Score</strong></td>
-              ${comparisonCandidates.map(p=>`<td><strong>${p.score?.score ? `${p.score.score}/100` : "Pending"}</strong></td>`).join("")}
+              ${comparisonCandidates.map(p=>`<td><strong>${getPostOverallScore(p) ? `${getPostOverallScore(p)}/100` : "Pending"}</strong></td>`).join("")}
             </tr>
           </tbody>
         </table>
