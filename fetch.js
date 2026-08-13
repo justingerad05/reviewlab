@@ -85,8 +85,19 @@ function safeArray(value){
    REVIEWLAB — PERMANENT DATA + AUTHORITY ENGINE
    ========================================================= */
 
+function loadJson(path, fallback = []){
+  try{
+    if(!fs.existsSync(path)) return fallback;
+    const parsed = JSON.parse(fs.readFileSync(path,"utf8"));
+    return parsed;
+  }catch(err){
+    console.warn(`⚠ Could not load ${path}: ${err.message}`);
+    return fallback;
+  }
+}
+
 function getReviewData(productSlug){
-  return reviewsData.find(
+  return safeArray(reviewsData).find(
     item => item.productSlug === productSlug
   ) || {};
 }
@@ -745,8 +756,8 @@ function getWidgetProducts(posts){
 
     mostCompared: reviews
       .sort((a,b)=>
-        ((generatedComparisons.get(b.slug)||[]).length) -
-        ((generatedComparisons.get(a.slug)||[]).length)
+        ((generatedComparisonsMap.get(b.slug)||[]).length) -
+        ((generatedComparisonsMap.get(a.slug)||[]).length)
       ).slice(0,5),
 
     bestValue: [...reviews]
@@ -836,6 +847,15 @@ function generateRadarChart(post){
          role="img"
          aria-label="Review performance radar chart">
 
+      ${[1,0.75,0.5,0.25].map(scale=>{
+        const ringPoints = axes.map((axis,index)=>{
+          const angle = (-Math.PI / 2) + (index * Math.PI * 2 / axes.length);
+          const r = radius * scale;
+          return `${(cx + Math.cos(angle)*r).toFixed(1)},${(cy + Math.sin(angle)*r).toFixed(1)}`;
+        }).join(" ");
+        return `<polygon points="${ringPoints}" fill="none" stroke="#475569" stroke-width="1" opacity=".55" />`;
+      }).join("")}
+
       <polygon
         points="${polygon}"
         fill="rgba(37,99,235,.18)"
@@ -889,14 +909,20 @@ const FEED_URL =
 "https://honestproductreviewlab.blogspot.com/feeds/posts/default?alt=atom";
 
 import site from "./_data/site.json" with { type: "json" };
-import products from "./_data/products.json" with { type: "json" };
-import entities from "./_data/entities.json" with { type: "json" };
-import comparisonsData from "./_data/comparisons.json" with { type: "json" };
-import authors from "./_data/authors.json" with { type: "json" };
-import faqData from "./_data/faq.json" with { type: "json" };
-import reviewsData from "./_data/reviews.json" with { type: "json" };
-import glossary from "./_data/glossary.json" with { type: "json" };
-import versions from "./_data/versions.json" with { type: "json" };
+
+/*
+  SOURCE DATA IS OPTIONAL ENRICHMENT.
+  Blogger is the active-post source of truth. The build recreates the
+  generated JSON snapshots from the current feed later in this file.
+*/
+const products = loadJson("./_data/products.json", []);
+const entities = loadJson("./_data/entities.json", []);
+const comparisonsData = loadJson("./_data/comparisons.json", []);
+const authors = loadJson("./_data/authors.json", []);
+const faqData = loadJson("./_data/faq.json", []);
+const reviewsData = loadJson("./_data/reviews.json", []);
+const glossary = loadJson("./_data/glossary.json", []);
+const versions = loadJson("./_data/versions.json", []);
 
 const SITE_URL = site.url;
 
@@ -1140,6 +1166,81 @@ const seenSlugs = new Set();
 
 const posts=[];
 
+function inferProductData(title, content = "", category = "") {
+  const text = cleanText(content);
+  const titleText = cleanText(title);
+
+  const labeled = (label) => {
+    const re = new RegExp(`${label}\\s*[:\\-]\\s*([^\\n|]+)`, "i");
+    const m = text.match(re);
+    return m ? m[1].trim() : "";
+  };
+
+  const priceMatch = text.match(/(?:Price|Pricing|Cost)\\s*[:\\-]\\s*([^\\n|<]{1,100})/i)
+    || text.match(/(?:[$€£₦]\\s*\\d[\\d,]*(?:\\.\\d{1,2})?(?:\\s*\\/\\s*(?:month|mo|year|yr|week))?)/i);
+
+  const version = labeled("Product Version|Version");
+  const platformsRaw = labeled("Platforms?|Supported Platforms?");
+  const trialRaw = labeled("Trial");
+  const refundRaw = labeled("Refund|Refund Policy");
+  const website = labeled("Website|Official Website");
+  const brand = labeled("Brand");
+  const developer = labeled("Developer|Company|Maker");
+  const bestForRaw = labeled("Best For|Audience|Who Is It For");
+
+  const inferredName = labeled("Product|Product Name|Tool") ||
+    titleText
+      .replace(/\\b(honest|independent|ai|software|tool|review|2025|2026|2024|updated|tested|test|analysis|verdict|results|rating|worth it)\\b/gi, " ")
+      .replace(/[-|:]+/g, " ")
+      .replace(/\\s+/g, " ")
+      .trim() || titleText;
+
+  const slug = inferredName.toLowerCase()
+    .replace(/[^a-z0-9]+/g,"-")
+    .replace(/^-|-$/g,"");
+
+  const price = priceMatch ? (priceMatch[1] || priceMatch[0]).trim() : "";
+
+  const keywords = Array.from(new Set(
+    `${titleText} ${category}`
+      .toLowerCase()
+      .replace(/[^a-z0-9\\s-]/g," ")
+      .split(/\\s+/)
+      .filter(w => w.length >= 4)
+  )).slice(0,15);
+
+  return {
+    slug,
+    name: inferredName,
+    brand: brand || inferredName,
+    developer,
+    category,
+    website,
+    price,
+    pricingModel: /\\/(?:month|mo)/i.test(price) ? "Subscription" : (/one[- ]time/i.test(price) ? "One-time" : ""),
+    trial: /yes|true|free|day/i.test(trialRaw),
+    refund: /yes|true|day|money.?back/i.test(refundRaw),
+    rating: 0,
+    reviewed: true,
+    featured: false,
+    affiliate: "",
+    pros: [],
+    cons: [],
+    bestFor: bestForRaw ? bestForRaw.split(/,|\\s+and\\s+/).map(x=>x.trim()).filter(Boolean) : [],
+    avoidFor: [],
+    alternative: [],
+    features: [],
+    keywords,
+    audience: [],
+    useCases: [],
+    strengths: [],
+    lastUpdated: "",
+    version,
+    platforms: platformsRaw ? platformsRaw.split(/,|\\s+\\|\\s+/).map(x=>x.trim()).filter(Boolean) : [],
+    performance: {}
+  };
+}
+
 function getProductData(title, content = "") {
 
   const searchText = `${title} ${content}`;
@@ -1166,7 +1267,9 @@ function getProductData(title, content = "") {
     );
   });
 
-  if (!product) return null;
+  if (!product) {
+    return inferProductData(title, content, "");
+  }
 
   return {
     slug: product.slug || "",
@@ -1212,11 +1315,17 @@ function getProductData(title, content = "") {
 }
 
 function detectTopic(title, html) {
-  // 1. First try the products database
-  const product = getProductData(title, html);
+  // 1. First try the existing product enrichment database.
+  const sourceProduct = safeArray(products).find(product => {
+    const haystack = normalizeText(`${title} ${html}`);
+    return [product?.name, product?.slug, safeString(product?.slug).replace(/-/g," ")]
+      .filter(Boolean)
+      .map(normalizeText)
+      .some(v => v && haystack.includes(v));
+  });
 
-  if (product?.category) {
-    return product.category;
+  if (sourceProduct?.category) {
+    return sourceProduct.category;
   }
 
   // 2. Fallback to keyword detection
@@ -1327,6 +1436,8 @@ Math.ceil(textOnly.split(/\s+/).length / 200)
 const wordCount = textOnly.split(/\s+/).length;
 const productMatch = getProductData(title, rawHtml);
 const productInfo = productMatch || {};
+if(productInfo && !productInfo.category) productInfo.category = category;
+if(productInfo && !productInfo.lastUpdated) productInfo.lastUpdated = entry.published || "";
 const structuredProsCons =
   extractStructuredProsCons(rawHtml, productInfo);
 
@@ -1998,7 +2109,7 @@ fs.writeFileSync(
   html
 );
 }
-const generatedComparisons = new Map();
+const generatedComparisonsMap = new Map();
 const comparisonPairs = new Set();
 
 /* BUILD ALL COMPARISON PAGES */
@@ -2034,18 +2145,18 @@ p.product
       `${sorted[0]}-vs-${sorted[1]}`;
 
     // SAVE FOR A
-    if(!generatedComparisons.has(postA.slug)){
-      generatedComparisons.set(postA.slug, []);
+    if(!generatedComparisonsMap.has(postA.slug)){
+      generatedComparisonsMap.set(postA.slug, []);
     }
-    generatedComparisons.get(postA.slug).push({
+    generatedComparisonsMap.get(postA.slug).push({
       slug,
       title: `${postA.title} vs ${postB.title}`
     });
     // SAVE FOR B
-    if(!generatedComparisons.has(postB.slug)){
-      generatedComparisons.set(postB.slug, []);
+    if(!generatedComparisonsMap.has(postB.slug)){
+      generatedComparisonsMap.set(postB.slug, []);
     }
-    generatedComparisons.get(postB.slug).push({
+    generatedComparisonsMap.get(postB.slug).push({
       slug,
       title: `${postB.title} vs ${postA.title}`
     });
@@ -2272,6 +2383,20 @@ questions.push(match[1]);
 return questions.slice(0,4);
 }
 
+function generateSupportingPosts(currentPost, allPosts, limit = 3){
+  return allPosts
+    .filter(post => post.slug !== currentPost.slug && post.postType === "supporting")
+    .map(post => {
+      let score = 0;
+      if(post.category === currentPost.category) score += 50;
+      score += scoreSimilarity(`${currentPost.title} ${currentPost.description}`, `${post.title} ${post.description}`) * 6;
+      return {post, score};
+    })
+    .sort((a,b)=>b.score-a.score)
+    .slice(0,limit)
+    .map(x=>x.post);
+}
+
 /* BUILD POSTS */
 for(const post of posts){
 fs.mkdirSync(`_site/posts/${post.slug}`,{recursive:true});
@@ -2302,6 +2427,7 @@ const related = relatedPosts
 </li>`).join("");
 const category = post.category || "ai-writing-tools";
 const categoryTitle = formatCategoryTitle(category);
+const sidebarSupporting = generateSupportingPosts(post, posts, 3);
 
 const breadcrumbHTML = `
 `;
@@ -2455,7 +2581,7 @@ ${post.postType === "review" ? `
 <section class="comparison-block">
 <h3>Compare This Tool</h3>
 <ul>
-${(generatedComparisons.get(post.slug) || [])
+${(generatedComparisonsMap.get(post.slug) || [])
 
 .map(comp => `
 <li>
@@ -2534,12 +2660,10 @@ ${related}
 </div>
 
 <!-- 5. INTERNAL LINKS -->
-<div class="sidebar-card">
+<div class="sidebar-card related-guides">
   <h3>📚 Related Guides</h3>
   <ul>
-    <li><a href="/ai-tools/">Best AI Tools for Beginners</a></li>
-    <li><a href="/posts/">How I Made My First $100 Online</a></li>
-    <li><a href="/ai-tools/automation-tools/">Top Passive Income Systems</a></li>
+    ${sidebarSupporting.map(p=>`<li><a href="${p.url}">${escapeHtml(p.title)}</a></li>`).join("")}
   </ul>
 </div>
 
@@ -2613,66 +2737,68 @@ hover.classList.remove("hover-centered");
 </script>
 <script>
 window.addEventListener("load", function(){
-  // 1. Load the real post data from the backend
-  const postPool = ${ctaJson}; 
-  if (!postPool || postPool.length === 0) return;
+  const reviewPool = ${JSON.stringify(topPosts)};
+  const supportingPool = ${JSON.stringify(posts.filter(p=>p.postType === "supporting").map(p=>({title:p.title,url:p.url,category:p.category})))};
+  if(!reviewPool.length) return;
 
-  // The #1 "Best Tool" is always the very first item in the list
-  const primaryPost = postPool[0];
+  const seed = Array.from(location.pathname).reduce((n,ch)=>n + ch.charCodeAt(0),0);
+  const rotate = (pool, offset) => pool.length ? pool[(seed + offset) % pool.length] : null;
 
-  // 2. PROFESSIONAL CTA ROTATOR
-  // This selects every button: top-cta, mid-cta, decision-cta, money-cta, and sidebar
-  const allButtons = document.querySelectorAll(".cta-btn, .sidebar-btn");
-  
-  allButtons.forEach((btn, index) => {
-    // We use the modulo (%) to cycle through the 5 posts 
-    // so every button on the page points to a DIFFERENT real review.
-    const assignedPost = postPool[index % postPool.length];
-    btn.setAttribute("href", assignedPost.url);
-    
-    // Optional: Update button text to be more specific if it's a generic button
-    if(btn.innerText.includes("See #1 Tool") || btn.innerText.includes("See Tool")) {
-       btn.innerHTML = \`Check Out \${assignedPost.title} →\`;
+  /* REVIEW-ONLY CTA POOL: never replaced with supporting posts. */
+  const reviewButtons = document.querySelectorAll(
+    '.top-cta .cta-btn, .mid-cta .cta-btn, .decision-cta .cta-btn, .comparison-block .cta-btn, .money-cta .cta-btn, .sticky-main-cta .sidebar-btn'
+  );
+
+  reviewButtons.forEach((btn,index)=>{
+    const target = rotate(reviewPool,index + 1);
+    if(!target) return;
+    btn.href = target.url;
+    if(btn.innerText.includes('See #1 Tool') || btn.innerText.includes('See Tool') || btn.innerText.includes('View #1 Recommendation')){
+      btn.textContent = `Check Out ${target.title} →`;
     }
   });
 
-  // 3. SCROLLING CTA (Always points to the #1 Best performing post)
-  const strollCta = document.querySelector(".stroll-main-cta");
-  if(strollCta) {
-    window.addEventListener("scroll", function(){
-      const scrollPercent = (window.scrollY / document.body.scrollHeight) * 100;
-      if(scrollPercent > 35){
-         if(!strollCta.classList.contains("active")){
-            strollCta.classList.add("active");
-            const link = strollCta.querySelector("a");
-            if(link) {
-              link.href = primaryPost.url;
-              link.innerHTML = \`Top Choice: \${primaryPost.title} →\`;
-            }
-         }
-      } else {
-         strollCta.classList.remove("active");
-      }
-    });
+  /* Supporting-post links rotate independently. */
+  const guideLinks = document.querySelectorAll('.related-guides a, .internal-widget .internal-list a');
+  guideLinks.forEach((link,index)=>{
+    const target = rotate(supportingPool,index + 7);
+    if(target) link.href = target.url;
+  });
+
+  /* Review-only stroll CTA. */
+  const strollCta = document.querySelector('.stroll-main-cta');
+  if(strollCta){
+    const strollTarget = rotate(reviewPool,3);
+    const link = strollCta.querySelector('a');
+    if(link && strollTarget){
+      link.href = strollTarget.url;
+      link.textContent = `Top Choice: ${strollTarget.title} →`;
+    }
+    window.addEventListener('scroll',()=>{
+      const max = Math.max(1,document.body.scrollHeight-window.innerHeight);
+      strollCta.classList.toggle('active',(window.scrollY/max)*100 > 35);
+    },{passive:true});
   }
 
-  // 4. EXIT POPUP (Promotes the #1 Best performing post)
+  /* Review-only exit popup, independently rotated. */
   let popupShown = false;
-  document.addEventListener("mouseleave", function(e){
+  document.addEventListener('mouseleave',function(e){
     if(e.clientY > 0 || popupShown) return;
     popupShown = true;
-    const popup = document.createElement("div");
-    popup.className = "exit-popup-overlay";
-    popup.innerHTML = \`
+    const target = rotate(reviewPool,5);
+    if(!target) return;
+    const popup = document.createElement('div');
+    popup.className = 'exit-popup-overlay';
+    popup.innerHTML = `
       <div class="exit-popup">
-        <h3>Don't Miss Our #1 Recommendation</h3>
-        <p>Our testing shows <strong>\${primaryPost.title}</strong> is currently delivering the best results.</p>
-        <a href="\${primaryPost.url}" class="cta-btn">Read Full Review →</a>
+        <h3>Don't Miss Our Recommendation</h3>
+        <p>Our current review model recommends <strong>${target.title}</strong> for this page.</p>
+        <a href="${target.url}" class="cta-btn">Read Full Review →</a>
         <span class="close-popup">✕</span>
-      </div>\`;
-
+      </div>`;
     document.body.appendChild(popup);
-    popup.querySelector(".close-popup").onclick = () => popup.remove();
+    popup.querySelector('.close-popup').onclick = () => popup.remove();
+    popup.addEventListener('click',e=>{if(e.target===popup) popup.remove();});
   });
 });
 </script>
@@ -3254,6 +3380,84 @@ ${authorPosts}
 </html>
 `);
 fs.writeFileSync("_site/_data/posts.json",JSON.stringify(posts,null,2));
+
+/* =========================================================
+   AUTOMATIC DATA SNAPSHOTS
+   Blogger is authoritative for active posts. These files are rebuilt
+   every run, so publishing/unpublishing a post automatically changes
+   the generated datasets without manual product maintenance.
+   ========================================================= */
+const activeProducts = posts
+  .filter(p=>p.isReview && p.product?.name)
+  .map(p=>({
+    slug:p.product.slug || p.slug,
+    name:p.product.name || p.title,
+    brand:p.product.brand || p.product.name || p.title,
+    developer:p.product.developer || "",
+    category:p.category,
+    website:p.product.website || "",
+    price:p.product.price || "",
+    pricingModel:p.product.pricingModel || "",
+    trial:p.product.trial ?? false,
+    refund:p.product.refund ?? false,
+    rating:Number(p.product.rating || 0),
+    reviewed:true,
+    featured:!!p.product.featured,
+    affiliate:p.product.affiliate || "",
+    pros:safeArray(p.pros),
+    cons:safeArray(p.cons),
+    bestFor:safeArray(p.product.bestFor),
+    avoidFor:safeArray(p.product.avoidFor),
+    alternative:safeArray(p.product.alternative),
+    features:safeArray(p.product.features),
+    keywords:safeArray(p.product.keywords),
+    audience:safeArray(p.product.audience),
+    useCases:safeArray(p.product.useCases),
+    strengths:safeArray(p.product.strengths),
+    lastUpdated:p.product.lastUpdated || p.date || "",
+    version:p.product.version || "",
+    platforms:safeArray(p.product.platforms),
+    performance:p.product.performance || {}
+  }));
+
+const activeReviews = posts.filter(p=>p.isReview).map(p=>({
+  productSlug:p.product?.slug || p.slug,
+  reviewedBy:p.reviewData?.reviewedBy || "justin-gerald",
+  testDuration:p.reviewData?.testDuration || "",
+  platforms:safeArray(p.product?.platforms),
+  methodology:safeArray(p.reviewData?.methodology),
+  score:p.score?.score || 0,
+  reviewScore:p.reviewScore || {},
+  pros:p.pros || [],
+  cons:p.cons || []
+}));
+
+const activeVersions = posts.filter(p=>p.isReview).map(p=>({
+  productSlug:p.product?.slug || p.slug,
+  history:safeArray(p.versionHistory).length ? p.versionHistory : (p.product?.version ? [{date:p.product.lastUpdated || p.date,version:p.product.version,changes:["Review generated from current Blogger content"]}] : [])
+}));
+
+const detectedEntityNames = Array.from(new Set(posts.flatMap(p=>safeArray(p.entities))));
+const mergedEntities = Array.from(new Map([
+  ...safeArray(entities).map(e=>[safeString(e.name).toLowerCase(),e]),
+  ...detectedEntityNames.map(name=>[name.toLowerCase(),{name}])
+]).values());
+
+const generatedFaq = posts.flatMap(p=>extractFAQs(p.html).map(question=>({
+  postSlug:p.slug,
+  question
+})));
+
+const generatedComparisons = Array.from(generatedComparisonsMap.entries()).flatMap(([slug,items])=>items.map(item=>({postSlug:slug,...item})));
+
+fs.writeFileSync("_site/_data/products.json",JSON.stringify(activeProducts,null,2));
+fs.writeFileSync("_site/_data/reviews.json",JSON.stringify(activeReviews,null,2));
+fs.writeFileSync("_site/_data/versions.json",JSON.stringify(activeVersions,null,2));
+fs.writeFileSync("_site/_data/entities.json",JSON.stringify(mergedEntities,null,2));
+fs.writeFileSync("_site/_data/faq.json",JSON.stringify(generatedFaq,null,2));
+fs.writeFileSync("_site/_data/comparisons.json",JSON.stringify(generatedComparisons,null,2));
+fs.writeFileSync("_site/_data/authors.json",JSON.stringify(authors,null,2));
+fs.writeFileSync("_site/_data/glossary.json",JSON.stringify(glossary,null,2));
 
 const searchIndex = posts.map(p=>({
   title: p.title,
