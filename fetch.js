@@ -2871,7 +2871,7 @@ window.addEventListener("load", function(){
     if(!target) return;
     btn.href = target.url;
     if(btn.textContent.includes("#1 Tool") || btn.textContent.includes("Proven Tool") || btn.textContent.includes("Best Tool") || btn.textContent.includes("Current Recommendation")){
-      btn.textContent = `Check Out ${target.title} →`;
+      btn.textContent = "Check Out " + target.title + " →";
     }
   });
 
