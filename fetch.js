@@ -85,15 +85,111 @@ function safeArray(value){
    REVIEWLAB — PERMANENT DATA + AUTHORITY ENGINE
    ========================================================= */
 
-function loadJson(path, fallback = []){
+function loadJson(filePath, fallback = []){
   try{
-    if(!fs.existsSync(path)) return fallback;
-    const parsed = JSON.parse(fs.readFileSync(path,"utf8"));
-    return parsed;
-  }catch(err){
-    console.warn(`⚠ Could not load ${path}: ${err.message}`);
+    if(!fs.existsSync(filePath)) return fallback;
+    const parsed = JSON.parse(fs.readFileSync(filePath, "utf-8"));
+    return parsed ?? fallback;
+  }catch(error){
+    console.warn(`⚠ Could not load ${filePath}: ${error.message}`);
     return fallback;
   }
+}
+
+function slugifyValue(value = ""){
+  return safeString(value)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g,"-")
+    .replace(/^-+|-+$/g,"")
+    .slice(0,100);
+}
+
+function extractLabeledField(html, labels = []){
+  const source = safeString(html);
+  const names = labels
+    .map(label => safeString(label).replace(/[.*+?^${}()|[\]\\]/g,"\\$&"))
+    .join("|");
+  if(!names) return "";
+
+  const patterns = [
+    new RegExp(`<(?:strong|b|span|div)[^>]*>\\s*(?:${names})\\s*:?\\s*<\\/(?:strong|b|span|div)>\\s*([^<]{1,220})`,"i"),
+    new RegExp(`(?:${names})\\s*:\s*([^<\\n]{1,220})`,"i")
+  ];
+
+  for(const regex of patterns){
+    const match = source.match(regex);
+    if(match?.[1]) return cleanText(match[1]);
+  }
+
+  return "";
+}
+
+function parseBooleanField(value, fallback = false){
+  const text = safeLower(value).trim();
+  if(!text) return fallback;
+  if(/^(yes|true|available|included|free|included with purchase)/i.test(text)) return true;
+  if(/^(no|false|none|not available|unavailable)/i.test(text)) return false;
+  return fallback;
+}
+
+function extractProductMetadataFromPost(title, html){
+  const name =
+    extractLabeledField(html,["Product","Product Name","Tool","Software"]) ||
+    safeString(title)
+      .replace(/\b(complete\s+)?(honest\s+)?review\b.*$/i,"")
+      .replace(/[|–—-]\s*202[0-9].*$/i,"")
+      .trim();
+
+  const category = extractLabeledField(html,["Category","Product Category","Niche"]);
+  const price = extractLabeledField(html,["Price","Pricing","Cost"]);
+  const trial = extractLabeledField(html,["Trial","Free Trial"]);
+  const refund = extractLabeledField(html,["Refund","Refund Policy"]);
+  const version = extractLabeledField(html,["Version","Product Version"]);
+  const platformsRaw = extractLabeledField(html,["Platforms","Platform","Supported Platforms"]);
+  const duration = extractLabeledField(html,["Test Duration","Testing Duration","Duration"]);
+  const reviewedBy = extractLabeledField(html,["Reviewed by","Reviewer","Author"]);
+  const website = extractLabeledField(html,["Website","Official Website"]);
+  const bestForRaw = extractLabeledField(html,["Best For","Who Is It For"]);
+
+  const platforms = platformsRaw
+    ? platformsRaw.split(/[,|•]/).map(x=>cleanText(x)).filter(Boolean).slice(0,8)
+    : [];
+
+  const bestFor = bestForRaw
+    ? bestForRaw.split(/[,|•]/).map(x=>cleanText(x)).filter(Boolean).slice(0,8)
+    : [];
+
+  return {
+    slug: slugifyValue(name),
+    name,
+    brand: name,
+    developer: "",
+    category,
+    website,
+    price,
+    pricingModel: "",
+    trial: parseBooleanField(trial,false),
+    refund: parseBooleanField(refund,false),
+    rating: 0,
+    reviewed: true,
+    featured: false,
+    affiliate: "",
+    pros: [],
+    cons: [],
+    bestFor,
+    alternative: [],
+    features: [],
+    keywords: [],
+    audience: bestFor,
+    useCases: [],
+    strengths: [],
+    lastUpdated: "",
+    version,
+    platforms,
+    performance: {},
+    testDuration: duration,
+    reviewedBy
+  };
 }
 
 function getReviewData(productSlug){
@@ -103,7 +199,7 @@ function getReviewData(productSlug){
 }
 
 function getVersionHistory(productSlug){
-  const item = versions.find(
+  const item = safeArray(versions).find(
     item => item.productSlug === productSlug
   );
 
@@ -267,32 +363,48 @@ function buildReviewScore({
       return;
     }
 
+    let value = 5;
+
     const productText = cleanText(
-      `${product?.name || ""} ${safeArray(product?.features).join(" ")} ${safeArray(product?.keywords).join(" ")} ${html}`
+      `${product?.name || ""} ${product?.features?.join(" ") || ""} ${html}`
     ).toLowerCase();
 
-    const signals = {
-      features: ["feature","template","integration","tool","function","capability"],
-      easeOfUse: ["easy","simple","beginner","intuitive","setup","quick","fast"],
-      pricing: ["affordable","cheap","value","pricing","free","trial","worth","expensive","cost"],
-      support: ["support","customer service","help center","documentation","community","response"],
-      automation: ["automation","workflow","automate","agent","batch","schedule","integration"],
-      accuracy: ["accurate","accuracy","quality","precise","natural","consistent","realistic"]
-    };
+    if(
+      key === "features" &&
+      safeArray(product?.features).length >= 3
+    ){
+      value = 7;
+    }
 
-    let value = 5;
-    const hits = (signals[key] || []).reduce((n,word)=>
-      n + (productText.match(new RegExp(word.replace(/\s+/g,"\s+"),"gi")) || []).length, 0);
-    value += Math.min(3, hits);
+    if(
+      key === "easeOfUse" &&
+      /(easy|simple|beginner|intuitive|easy to use)/i.test(productText)
+    ){
+      value = 7;
+    }
 
-    const positive = safeArray(pros).join(" ").toLowerCase();
-    const negative = safeArray(cons).join(" ").toLowerCase();
-    const positiveHits = (signals[key] || []).reduce((n,w)=>n + (positive.match(new RegExp(w,"gi")) || []).length,0);
-    const negativeHits = (signals[key] || []).reduce((n,w)=>n + (negative.match(new RegExp(w,"gi")) || []).length,0);
-    value += Math.min(2, positiveHits);
-    value -= Math.min(2, negativeHits);
+    if(
+      key === "automation" &&
+      /(automation|workflow|automate|agent)/i.test(productText)
+    ){
+      value = 7;
+    }
 
-    reviewScore[key] = Math.max(1, Math.min(10, value));
+    if(
+      key === "accuracy" &&
+      /(accurate|accuracy|quality|precise|natural)/i.test(productText)
+    ){
+      value = 7;
+    }
+
+    if(
+      key === "support" &&
+      /(support|customer service|help center)/i.test(productText)
+    ){
+      value = 6;
+    }
+
+    reviewScore[key] = value;
   });
 
   const values = Object.values(reviewScore);
@@ -332,20 +444,27 @@ function generateReviewTimeline(post){
 
   const updated =
     post.product?.lastUpdated ||
+    review.lastUpdated ||
     history.at(-1)?.date ||
+    post.date ||
     "Not specified";
 
   const version =
     post.product?.version ||
+    review.version ||
     history.at(-1)?.version ||
     "Not specified";
 
   const duration =
+    post.product?.testDuration ||
     review.testDuration ||
+    extractLabeledField(post.html,["Test Duration","Testing Duration","Duration"]) ||
     "Not specified";
 
   const platforms =
-    safeArray(review.platforms);
+    safeArray(post.product?.platforms).length
+      ? safeArray(post.product?.platforms)
+      : safeArray(review.platforms);
 
   return `
   <section class="review-timeline">
@@ -381,6 +500,8 @@ function generateReviewTimeline(post){
       <div>
         <strong>Reviewed by</strong>
         <span>${escapeHtml(
+          post.product?.reviewedBy ||
+          review.reviewedBy ||
           getAuthorData(review.reviewedBy)?.name ||
           "Justin Gerald"
         )}</span>
@@ -740,8 +861,8 @@ function getWidgetProducts(posts){
 
     mostCompared: reviews
       .sort((a,b)=>
-        ((generatedComparisonsMap.get(b.slug)||[]).length) -
-        ((generatedComparisonsMap.get(a.slug)||[]).length)
+        ((generatedComparisons.get(b.slug)||[]).length) -
+        ((generatedComparisons.get(a.slug)||[]).length)
       ).slice(0,5),
 
     bestValue: [...reviews]
@@ -789,76 +910,122 @@ function generateDynamicSidebar(posts){
 function generateRadarChart(post){
   if(!post.isReview) return "";
 
-  const values = post.score?.reviewScore || post.reviewScore || {};
-  const readScore = (key) => {
-    const n = Number(values[key]);
-    return Number.isFinite(n) ? Math.max(0, Math.min(10, n)) : 5;
-  };
+  const values = post.score?.reviewScore || {};
 
   const axes = [
-    ["Speed",readScore("easeOfUse")],
-    ["Accuracy",readScore("accuracy")],
-    ["Automation",readScore("automation")],
-    ["Templates",readScore("features")],
-    ["Support",readScore("support")],
-    ["Pricing",readScore("pricing")]
+    ["Speed",values.easeOfUse || 5],
+    ["Accuracy",values.accuracy || 5],
+    ["Automation",values.automation || 5],
+    ["Templates",values.features || 5],
+    ["Support",values.support || 5],
+    ["Pricing",values.pricing || 5]
   ];
 
-  const cx = 150, cy = 150, radius = 100;
-  const angleFor = index => (-Math.PI / 2) + (index * Math.PI * 2 / axes.length);
-  const pointFor = (index, value) => {
-    const angle = angleFor(index);
+  const cx = 150;
+  const cy = 150;
+  const radius = 100;
+
+  const points = axes.map((axis,index)=>{
+    const angle =
+      (-Math.PI / 2) +
+      (index * Math.PI * 2 / axes.length);
+
+    const value = Math.max(0,Math.min(10,Number(axis[1])));
+
     const r = radius * value / 10;
-    return [cx + Math.cos(angle) * r, cy + Math.sin(angle) * r];
-  };
-  const polygon = axes.map((axis,index)=>{
-    const [x,y] = pointFor(index,axis[1]);
-    return `${x.toFixed(1)},${y.toFixed(1)}`;
-  }).join(" ");
 
-  const rings = [1,0.75,0.5,0.25].map(scale=>{
-    const ringPoints = axes.map((axis,index)=>{
-      const [x,y] = pointFor(index,scale*10);
-      return `${x.toFixed(1)},${y.toFixed(1)}`;
-    }).join(" ");
-    return `<polygon points="${ringPoints}" fill="none" stroke="#64748b" stroke-width="1" opacity=".65" />`;
-  }).join("");
+    return [
+      cx + Math.cos(angle) * r,
+      cy + Math.sin(angle) * r
+    ];
+  });
 
-  const spokes = axes.map((axis,index)=>{
-    const angle = angleFor(index);
-    const x = cx + Math.cos(angle) * radius;
-    const y = cy + Math.sin(angle) * radius;
-    const tx = cx + Math.cos(angle) * (radius + 22);
-    const ty = cy + Math.sin(angle) * (radius + 22);
-    return `<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="#94a3b8" stroke-width="1" />
-      <text x="${tx}" y="${ty}" text-anchor="middle" font-size="10" fill="#f8fafc">${escapeHtml(axis[0])}</text>`;
-  }).join("");
+  const polygon = points
+    .map(([x,y])=>`${x.toFixed(1)},${y.toFixed(1)}`)
+    .join(" ");
 
   return `
   <section class="review-radar">
     <h2>Performance Profile</h2>
-    <svg viewBox="0 0 300 300" role="img" aria-label="Review performance radar chart">
-      ${rings}
-      ${spokes}
-      <polygon points="${polygon}" fill="rgba(37,99,235,.22)" stroke="#60a5fa" stroke-width="2.5" />
-      ${axes.map((axis,index)=>{
-        const [x,y] = pointFor(index,axis[1]);
-        return `<circle cx="${x}" cy="${y}" r="3" fill="#60a5fa" />`;
+
+    <svg viewBox="0 0 300 300"
+         role="img"
+         aria-label="Review performance radar chart">
+
+      ${[2,4,6,8,10].map(level=>{
+        const ringPointsArray = axes.map((axis,index)=>{
+          const angle = (-Math.PI / 2) + (index * Math.PI * 2 / axes.length);
+          const r = radius * level / 10;
+          return `${(cx + Math.cos(angle) * r).toFixed(1)},${(cy + Math.sin(angle) * r).toFixed(1)}`;
+        });
+        const ringPoints = [...ringPointsArray, ringPointsArray[0]].join(" ");
+        return `<polyline points="${ringPoints}" fill="none" stroke="#475569" stroke-width="1" opacity=".55" />`;
       }).join("")}
+
+      <polygon
+        points="${polygon}"
+        fill="rgba(37,99,235,.18)"
+        stroke="#60a5fa"
+        stroke-width="2.5"
+      />
+
+      ${axes.map((axis,index)=>{
+        const angle =
+          (-Math.PI / 2) +
+          (index * Math.PI * 2 / axes.length);
+
+        const x =
+          cx + Math.cos(angle) * radius;
+
+        const y =
+          cy + Math.sin(angle) * radius;
+
+        const tx =
+          cx + Math.cos(angle) * (radius + 20);
+
+        const ty =
+          cy + Math.sin(angle) * (radius + 20);
+
+        return `
+          <line
+            x1="${cx}"
+            y1="${cy}"
+            x2="${x}"
+            y2="${y}"
+            stroke="#cbd5e1"
+          />
+
+          <text
+            x="${tx}"
+            y="${ty}"
+            text-anchor="middle"
+            font-size="10"
+          >
+            ${escapeHtml(axis[0])}
+          </text>
+          <text
+            x="${cx + Math.cos(angle) * (radius * Number(axis[1]) / 10)}"
+            y="${cy + Math.sin(angle) * (radius * Number(axis[1]) / 10) - 4}"
+            text-anchor="middle"
+            font-size="9"
+            font-weight="700"
+            fill="#e2e8f0"
+          >
+            ${Math.round(Number(axis[1]))}/10
+          </text>
+        `;
+      }).join("")}
+
     </svg>
-  </section>`;
+  </section>
+  `;
 }
 
 const FEED_URL =
 "https://honestproductreviewlab.blogspot.com/feeds/posts/default?alt=atom";
 
-import site from "./_data/site.json" with { type: "json" };
-
-/*
-  SOURCE DATA IS OPTIONAL ENRICHMENT.
-  Blogger is the active-post source of truth. The build recreates the
-  generated JSON snapshots from the current feed later in this file.
-*/
+const site = loadJson("./_data/site.json", {url:"https://reviewlab.pages.dev"});
+/* Optional source data: Blogger remains the active-post source of truth. */
 const products = loadJson("./_data/products.json", []);
 const entities = loadJson("./_data/entities.json", []);
 const comparisonsData = loadJson("./_data/comparisons.json", []);
@@ -1110,88 +1277,11 @@ const seenSlugs = new Set();
 
 const posts=[];
 
-function inferProductData(title, content = "", category = "") {
-  const text = cleanText(content);
-  const titleText = cleanText(title);
-
-  const labeled = (label) => {
-    const re = new RegExp(`${label}\\s*[:\\-]\\s*([^\\n|]+)`, "i");
-    const m = text.match(re);
-    return m ? m[1].trim() : "";
-  };
-
-  const priceMatch = text.match(/(?:Price|Pricing|Cost)\\s*[:\\-]\\s*([^\\n|<]{1,100})/i)
-    || text.match(/(?:[$€£₦]\\s*\\d[\\d,]*(?:\\.\\d{1,2})?(?:\\s*\\/\\s*(?:month|mo|year|yr|week))?)/i);
-
-  const version = labeled("Product Version|Version");
-  const platformsRaw = labeled("Platforms?|Supported Platforms?");
-  const trialRaw = labeled("Trial");
-  const refundRaw = labeled("Refund|Refund Policy");
-  const website = labeled("Website|Official Website");
-  const brand = labeled("Brand");
-  const developer = labeled("Developer|Company|Maker");
-  const bestForRaw = labeled("Best For|Audience|Who Is It For");
-
-  const inferredName = labeled("Product|Product Name|Tool") ||
-    titleText
-      .replace(/\\b(honest|independent|ai|software|tool|review|2025|2026|2024|updated|tested|test|analysis|verdict|results|rating|worth it)\\b/gi, " ")
-      .replace(/[-|:]+/g, " ")
-      .replace(/\\s+/g, " ")
-      .trim() || titleText;
-
-  const slug = inferredName.toLowerCase()
-    .replace(/[^a-z0-9]+/g,"-")
-    .replace(/^-|-$/g,"");
-
-  const price = priceMatch ? (priceMatch[1] || priceMatch[0]).trim() : "";
-
-  const keywords = Array.from(new Set(
-    `${titleText} ${category}`
-      .toLowerCase()
-      .replace(/[^a-z0-9\\s-]/g," ")
-      .split(/\\s+/)
-      .filter(w => w.length >= 4)
-  )).slice(0,15);
-
-  return {
-    slug,
-    name: inferredName,
-    brand: brand || inferredName,
-    developer,
-    category,
-    website,
-    price,
-    pricingModel: /\\/(?:month|mo)/i.test(price) ? "Subscription" : (/one[- ]time/i.test(price) ? "One-time" : ""),
-    trial: /yes|true|free|day/i.test(trialRaw),
-    refund: /yes|true|day|money.?back/i.test(refundRaw),
-    rating: 0,
-    reviewed: true,
-    featured: false,
-    affiliate: "",
-    pros: [],
-    cons: [],
-    bestFor: bestForRaw ? bestForRaw.split(/,|\\s+and\\s+/).map(x=>x.trim()).filter(Boolean) : [],
-    avoidFor: [],
-    alternative: [],
-    features: [],
-    keywords,
-    audience: [],
-    useCases: [],
-    strengths: [],
-    lastUpdated: "",
-    version,
-    platforms: platformsRaw ? platformsRaw.split(/,|\\s+\\|\\s+/).map(x=>x.trim()).filter(Boolean) : [],
-    performance: {}
-  };
-}
-
 function getProductData(title, content = "") {
-
   const searchText = `${title} ${content}`;
   const normalizedSearch = normalizeText(searchText);
 
-  const product = products.find(product => {
-
+  const product = safeArray(products).find(product => {
     const productName = safeLower(product?.name);
     const productSlug = safeLower(product?.slug);
 
@@ -1200,76 +1290,57 @@ function getProductData(title, content = "") {
       productSlug,
       productSlug.replace(/-/g, " "),
       productSlug.replace(/-/g, ""),
-      productName.replace(/\s+/g, ""),
-      productName.replace(/\s+/g, "-")
+      productName.replace(/\s+/g,""),
+      productName.replace(/\s+/g,"-")
     ]
       .filter(Boolean)
       .map(normalizeText);
 
-    return variations.some(v =>
-      normalizedSearch.includes(v)
-    );
+    return variations.some(v => normalizedSearch.includes(v));
   });
 
-  if (!product) {
-    return inferProductData(title, content, "");
-  }
+  const source = product || extractProductMetadataFromPost(title, content);
+  if(!source?.name) return null;
 
   return {
-    slug: product.slug || "",
-    name: product.name || "",
-    brand: product.brand || product.name || "",
-    developer: product.developer || "",
-
-    category: product.category || "",
-    website: product.website || "",
-
-    price: product.price || "",
-    pricingModel: product.pricingModel || "",
-
-    trial: product.trial ?? false,
-    refund: product.refund ?? false,
-
-    rating: Number(product.rating || 0),
-
-    reviewed: product.reviewed ?? true,
-    featured: product.featured ?? false,
-
-    affiliate: product.affiliate || "",
-
-    pros: safeArray(product.pros),
-    cons: safeArray(product.cons),
-    bestFor: safeArray(product.bestFor),
-
-    alternative: safeArray(product.alternative),
-    features: safeArray(product.features),
-    keywords: safeArray(product.keywords),
-
-    audience: safeArray(product.audience),
-    useCases: safeArray(product.useCases),
-    strengths: safeArray(product.strengths),
-
-    lastUpdated: product.lastUpdated || "",
-    version: product.version || "",
-
-    platforms: safeArray(product.platforms),
-
-    performance: product.performance || {}
+    slug: source.slug || slugifyValue(source.name),
+    name: source.name || "",
+    brand: source.brand || source.name || "",
+    developer: source.developer || "",
+    category: source.category || "",
+    website: source.website || "",
+    price: source.price || "",
+    pricingModel: source.pricingModel || "",
+    trial: source.trial ?? false,
+    refund: source.refund ?? false,
+    rating: Number(source.rating || 0),
+    reviewed: source.reviewed ?? true,
+    featured: source.featured ?? false,
+    affiliate: source.affiliate || "",
+    pros: safeArray(source.pros),
+    cons: safeArray(source.cons),
+    bestFor: safeArray(source.bestFor),
+    alternative: safeArray(source.alternative),
+    features: safeArray(source.features),
+    keywords: safeArray(source.keywords),
+    audience: safeArray(source.audience),
+    useCases: safeArray(source.useCases),
+    strengths: safeArray(source.strengths),
+    lastUpdated: source.lastUpdated || "",
+    version: source.version || "",
+    platforms: safeArray(source.platforms),
+    performance: source.performance || {},
+    testDuration: source.testDuration || "",
+    reviewedBy: source.reviewedBy || ""
   };
 }
 
 function detectTopic(title, html) {
-  // 1. First try the existing product enrichment database.
-  const sourceProduct = safeArray(products).find(product => {
-    const haystack = normalizeText(`${title} ${html}`);
-    return [product?.name, product?.slug, safeString(product?.slug).replace(/-/g," ")]
-      .filter(Boolean)
-      .map(normalizeText)
-      .some(v => v && haystack.includes(v));
-  });
+  // 1. First try the products database
+  const product = getProductData(title, html);
 
-  if (sourceProduct?.category) {
-    return sourceProduct.category;
+  if (product?.category) {
+    return product.category;
   }
 
   // 2. Fallback to keyword detection
@@ -1347,19 +1418,24 @@ let labels = [];
 const categories = safeArray(entry.category);
 
 labels = categories
-.map(c => safeLower(c?.term).trim().replace(/\s+/g," "))
+.map(c => safeLower(c?.term))
 .filter(Boolean);
-
-const labelTokens = new Set(labels.flatMap(label => [label, label.replace(/\s+/g,"-"), label.replace(/[-_]+/g," ")]));
   
 /* NEW AI-DRIVEN CATEGORY ENGINE */
-let category = detectTopic(title, rawHtml);
+let category = detectTopic(title, rawHtml); 
 
-/* Label-aware category override: labels are stronger than keyword inference. */
-if (["ai voice","voice","voice tools","ai-voice-tools"].some(x => labelTokens.has(x))) category = "ai-voice-tools";
-if (["ai writing","writing","writing tools","ai-writing-tools"].some(x => labelTokens.has(x))) category = "ai-writing-tools";
-if (["ai image","image","image tools","ai-image-generators"].some(x => labelTokens.has(x))) category = "ai-image-generators";
-if (["automation","automation tools","automation-tools"].some(x => labelTokens.has(x))) category = "automation-tools";
+if (labels.includes("writing") && category !== "ai-writing-tools") category = "ai-writing-tools";
+
+/* If the review itself supplies product metadata, it becomes the automatic
+   source for products/reviews/versions snapshots. */
+productInfo.category = productInfo.category || category;
+productInfo.lastUpdated = productInfo.lastUpdated || getText(entry.updated) || getText(entry.published) || "";
+if(!productInfo.testDuration){
+  productInfo.testDuration = extractLabeledField(rawHtml,["Test Duration","Testing Duration","Duration"]);
+}
+if(!productInfo.reviewedBy){
+  productInfo.reviewedBy = extractLabeledField(rawHtml,["Reviewed by","Reviewer","Author"]);
+}
   
 let baseSlug = title.toLowerCase()
 .replace(/[^a-z0-9]+/g,"-")
@@ -1386,8 +1462,6 @@ Math.ceil(textOnly.split(/\s+/).length / 200)
 const wordCount = textOnly.split(/\s+/).length;
 const productMatch = getProductData(title, rawHtml);
 const productInfo = productMatch || {};
-if(productInfo && !productInfo.category) productInfo.category = category;
-if(productInfo && !productInfo.lastUpdated) productInfo.lastUpdated = entry.published || "";
 const structuredProsCons =
   extractStructuredProsCons(rawHtml, productInfo);
 
@@ -1586,6 +1660,108 @@ faqSchema
 });
 
 posts.sort((a,b)=> new Date(b.date)-new Date(a.date));
+
+/* =========================================================
+   AUTOMATIC DATA SNAPSHOTS
+   Blogger is the source of truth. Every build recreates these
+   generated JSON files from currently published posts. Therefore
+   unpublishing a Blogger post removes its product/review/version
+   record from the next build automatically.
+   ========================================================= */
+function writeGeneratedDataSnapshots(allPosts){
+  const reviewPosts = allPosts.filter(p=>p.isReview && p.product);
+
+  const productMap = new Map();
+  reviewPosts.forEach(post=>{
+    const p = post.product;
+    const key = p.slug || slugifyValue(p.name);
+    const existing = productMap.get(key) || {};
+    productMap.set(key,{
+      ...existing,
+      slug:key,
+      name:p.name || existing.name || post.title,
+      brand:p.brand || existing.brand || p.name || post.title,
+      developer:p.developer || existing.developer || "",
+      category:p.category || existing.category || post.category,
+      website:p.website || existing.website || "",
+      price:p.price || existing.price || "",
+      pricingModel:p.pricingModel || existing.pricingModel || "",
+      trial:p.trial ?? existing.trial ?? false,
+      refund:p.refund ?? existing.refund ?? false,
+      rating:Number(p.rating || existing.rating || 0),
+      reviewed:true,
+      featured:Boolean(p.featured || existing.featured),
+      affiliate:p.affiliate || existing.affiliate || "",
+      pros:safeArray(post.pros.length ? post.pros : p.pros),
+      cons:safeArray(post.cons.length ? post.cons : p.cons),
+      bestFor:safeArray(p.bestFor),
+      alternative:safeArray(p.alternative),
+      features:safeArray(p.features),
+      keywords:safeArray(p.keywords),
+      audience:safeArray(p.audience),
+      useCases:safeArray(p.useCases),
+      strengths:safeArray(p.strengths),
+      lastUpdated:p.lastUpdated || existing.lastUpdated || post.date || "",
+      version:p.version || existing.version || "",
+      platforms:safeArray(p.platforms),
+      performance:p.performance || existing.performance || {},
+      score:post.score?.score || 0,
+      bestFor:safeArray(p.bestFor),
+      url:post.url
+    });
+  });
+
+  const generatedProducts = [...productMap.values()];
+
+  const generatedReviews = reviewPosts.map(post=>({
+    productSlug:post.product.slug,
+    postSlug:post.slug,
+    title:post.title,
+    url:post.url,
+    reviewedBy:post.product.reviewedBy || "Justin Gerald",
+    testDuration:post.product.testDuration || "",
+    platforms:safeArray(post.product.platforms),
+    lastUpdated:post.product.lastUpdated || post.date || "",
+    version:post.product.version || "",
+    methodology:[
+      "Installation","Setup","Speed","Output Quality",
+      "Customer Support","Pricing","Refund","Updates",
+      "Competition","Overall Score"
+    ],
+    score:post.score?.score || 0,
+    breakdown:post.reviewScore || {}
+  }));
+
+  const generatedVersions = reviewPosts.map(post=>({
+    productSlug:post.product.slug,
+    productName:post.product.name,
+    history:[{
+      date:post.product.lastUpdated || post.date || "",
+      version:post.product.version || "",
+      changes:["Initial ReviewLab review snapshot generated from the published Blogger review."]
+    }]
+  }));
+
+  const supportingRotation = allPosts
+    .filter(p=>p.postType === "supporting")
+    .map(p=>({title:p.title,url:p.url,category:p.category,slug:p.slug}));
+  const reviewRotation = reviewPosts
+    .map(p=>({title:p.title,url:p.url,category:p.category,slug:p.slug,score:p.score?.score || 0}));
+
+  fs.writeFileSync("_site/_data/products.json",JSON.stringify(generatedProducts,null,2));
+  fs.writeFileSync("_site/_data/reviews.json",JSON.stringify(generatedReviews,null,2));
+  fs.writeFileSync("_site/_data/versions.json",JSON.stringify(generatedVersions,null,2));
+  fs.writeFileSync("_site/assets/rotation.json",JSON.stringify({
+    generatedAt:new Date().toISOString(),
+    reviews:reviewRotation,
+    supporting:supportingRotation
+  },null,2));
+
+  console.log(`✓ Auto data snapshots: ${generatedProducts.length} products, ${generatedReviews.length} reviews, ${generatedVersions.length} version histories.`);
+}
+
+writeGeneratedDataSnapshots(posts);
+
 console.log("FIRST POST HTML:");
 console.log(posts[0]?.html);
 const POSTS_PER_PAGE = 10;
@@ -2018,8 +2194,8 @@ ${globalHeader()}
 
       <tr class="comparison-score-row">
         <td><strong>Overall Score</strong></td>
-        <td><strong>${Number(postA.score?.score || 0) || Math.round(Number(postA.product?.rating || 0)*20)}/100</strong></td>
-        <td><strong>${Number(postB.score?.score || 0) || Math.round(Number(postB.product?.rating || 0)*20)}/100</strong></td>
+        <td><strong>${postA.score?.score || 0}/100</strong></td>
+        <td><strong>${postB.score?.score || 0}/100</strong></td>
       </tr>
 
       <tr>
@@ -2059,7 +2235,7 @@ fs.writeFileSync(
   html
 );
 }
-const generatedComparisonsMap = new Map();
+const generatedComparisons = new Map();
 const comparisonPairs = new Set();
 
 /* BUILD ALL COMPARISON PAGES */
@@ -2095,18 +2271,18 @@ p.product
       `${sorted[0]}-vs-${sorted[1]}`;
 
     // SAVE FOR A
-    if(!generatedComparisonsMap.has(postA.slug)){
-      generatedComparisonsMap.set(postA.slug, []);
+    if(!generatedComparisons.has(postA.slug)){
+      generatedComparisons.set(postA.slug, []);
     }
-    generatedComparisonsMap.get(postA.slug).push({
+    generatedComparisons.get(postA.slug).push({
       slug,
       title: `${postA.title} vs ${postB.title}`
     });
     // SAVE FOR B
-    if(!generatedComparisonsMap.has(postB.slug)){
-      generatedComparisonsMap.set(postB.slug, []);
+    if(!generatedComparisons.has(postB.slug)){
+      generatedComparisons.set(postB.slug, []);
     }
-    generatedComparisonsMap.get(postB.slug).push({
+    generatedComparisons.get(postB.slug).push({
       slug,
       title: `${postB.title} vs ${postA.title}`
     });
@@ -2333,20 +2509,6 @@ questions.push(match[1]);
 return questions.slice(0,4);
 }
 
-function generateSupportingPosts(currentPost, allPosts, limit = 3){
-  return allPosts
-    .filter(post => post.slug !== currentPost.slug && post.postType === "supporting")
-    .map(post => {
-      let score = 0;
-      if(post.category === currentPost.category) score += 50;
-      score += scoreSimilarity(`${currentPost.title} ${currentPost.description}`, `${post.title} ${post.description}`) * 6;
-      return {post, score};
-    })
-    .sort((a,b)=>b.score-a.score)
-    .slice(0,limit)
-    .map(x=>x.post);
-}
-
 /* BUILD POSTS */
 for(const post of posts){
 fs.mkdirSync(`_site/posts/${post.slug}`,{recursive:true});
@@ -2354,14 +2516,16 @@ fs.mkdirSync(`_site/posts/${post.slug}`,{recursive:true});
 /* SAFE RECOMMENDATION ENGINE */
 const { tocHtml, updatedHtml } = generateToC(post.html);
 const relatedPosts = generateRelatedReviews(post, posts).slice(0,4);
-let inlinePosts = generateRelatedReviews(post, posts)
-.filter(p=>!relatedPosts.some(r=>r.slug===p.slug))
-.slice(0,3);
 
-/* HARD fallback — guarantees links always render */
-if(inlinePosts.length < 3){
-  inlinePosts = generateSupportingPosts(post, posts, 3);
-}
+/* CONTINUE READING = SUPPORTING CONTENT ONLY.
+   Deterministic per review so the same three guides do not appear on every review. */
+const supportingPosts = posts.filter(p=>p.postType === "supporting" && p.slug !== post.slug);
+const supportSeed = Array.from(post.slug || "review").reduce((n,ch)=>n + ch.charCodeAt(0),0);
+const inlinePosts = supportingPosts.length
+  ? Array.from({length: Math.min(3,supportingPosts.length)},(_,index)=>
+      supportingPosts[(supportSeed + index) % supportingPosts.length]
+    )
+  : [];
 const inlineRecs = inlinePosts
 .map(p=>`<li><a href="${p.url}" class="post-title">${p.title}</a></li>`)
 .join("");
@@ -2375,7 +2539,6 @@ const related = relatedPosts
 </li>`).join("");
 const category = post.category || "ai-writing-tools";
 const categoryTitle = formatCategoryTitle(category);
-const sidebarSupporting = generateSupportingPosts(post, posts, 3);
 
 const breadcrumbHTML = `
 `;
@@ -2529,7 +2692,7 @@ ${post.postType === "review" ? `
 <section class="comparison-block">
 <h3>Compare This Tool</h3>
 <ul>
-${(generatedComparisonsMap.get(post.slug) || [])
+${(generatedComparisons.get(post.slug) || [])
 
 .map(comp => `
 <li>
@@ -2607,11 +2770,19 @@ ${related}
 </p>
 </div>
 
-<!-- 5. INTERNAL LINKS -->
+<!-- 5. INTERNAL LINKS — SUPPORTING POST ROTATION -->
 <div class="sidebar-card related-guides">
   <h3>📚 Related Guides</h3>
   <ul>
-    ${sidebarSupporting.map(p=>`<li><a href="${p.url}">${escapeHtml(p.title)}</a></li>`).join("")}
+    ${(() => {
+      const pool = posts.filter(p=>p.postType === "supporting" && p.slug !== post.slug);
+      if(!pool.length) return `<li><a href="${SITE_URL}/posts/">Browse Supporting Guides →</a></li>`;
+      const seed = Array.from(post.slug || "post").reduce((n,ch)=>n + ch.charCodeAt(0),0) + 17;
+      return Array.from({length: Math.min(3,pool.length)},(_,i)=>{
+        const item = pool[(seed+i) % pool.length];
+        return `<li><a href="${item.url}">${escapeHtml(item.title)}</a></li>`;
+      }).join("");
+    })()}
   </ul>
 </div>
 
@@ -2685,68 +2856,67 @@ hover.classList.remove("hover-centered");
 </script>
 <script>
 window.addEventListener("load", function(){
-  const reviewPool = ${JSON.stringify(topPosts)};
-  const supportingPool = ${JSON.stringify(posts.filter(p=>p.postType === "supporting").map(p=>({title:p.title,url:p.url,category:p.category})))};
-  if(!reviewPool.length && !supportingPool.length) return;
+  const reviewPool = ${ctaJson};
+  const supportingPool = ${JSON.stringify(posts.filter(p=>p.postType === "supporting").map(p=>({title:p.title,url:p.url,category:p.category}))) };
+  const pathSeed = Array.from(location.pathname).reduce((n,ch)=>n + ch.charCodeAt(0),0);
 
-  const seed = Array.from(location.pathname).reduce((n,ch)=>n + ch.charCodeAt(0),0);
-  const rotate = (pool, offset) => pool.length ? pool[(seed + offset) % pool.length] : null;
+  const rotate = (pool, offset=0) =>
+    pool.length ? pool[(Math.abs(pathSeed + offset)) % pool.length] : null;
 
-  /* REVIEW-ONLY CTA POOL: never replaced with supporting posts. */
-  const reviewButtons = document.querySelectorAll(
-    '.top-cta .cta-btn, .mid-cta .cta-btn, .decision-cta .cta-btn, .comparison-block .cta-btn, .money-cta .cta-btn, .sticky-main-cta .sidebar-btn'
-  );
-
-  reviewButtons.forEach((btn,index)=>{
+  /* REVIEW-ONLY CTAs. These never receive supporting posts. */
+  document.querySelectorAll(
+    '.top-cta .cta-btn, .mid-cta .cta-btn, .money-cta .cta-btn, .comparison-block .cta-btn, .sticky-main-cta .sidebar-btn'
+  ).forEach((btn,index)=>{
     const target = rotate(reviewPool,index + 1);
     if(!target) return;
     btn.href = target.url;
-    if(btn.innerText.includes('See #1 Tool') || btn.innerText.includes('See Tool') || btn.innerText.includes('View #1 Recommendation')){
+    if(btn.textContent.includes("#1 Tool") || btn.textContent.includes("Proven Tool") || btn.textContent.includes("Best Tool") || btn.textContent.includes("Current Recommendation")){
       btn.textContent = `Check Out ${target.title} →`;
     }
   });
 
-  /* Supporting-post links rotate independently. */
-  const guideLinks = document.querySelectorAll('.related-guides a, .internal-widget .internal-list a');
-  guideLinks.forEach((link,index)=>{
-    const target = rotate(supportingPool,index + 7);
+  /* SUPPORTING-ONLY guide links. */
+  document.querySelectorAll('.related-guides a, .internal-widget .internal-list a').forEach((link,index)=>{
+    const target = rotate(supportingPool,index + 17);
     if(target) link.href = target.url;
   });
 
-  /* Review-only stroll CTA. */
+  /* REVIEW-ONLY strolling CTA. */
   const strollCta = document.querySelector('.stroll-main-cta');
   if(strollCta){
-    const strollTarget = rotate(reviewPool,3);
+    const target = rotate(reviewPool,3);
     const link = strollCta.querySelector('a');
-    if(link && strollTarget){
-      link.href = strollTarget.url;
-      link.textContent = `Top Choice: ${strollTarget.title} →`;
+    if(link && target){
+      link.href = target.url;
+      link.textContent = `Top Choice: ${target.title} →`;
     }
-    window.addEventListener('scroll',()=>{
-      const max = Math.max(1,document.body.scrollHeight-window.innerHeight);
-      strollCta.classList.toggle('active',(window.scrollY/max)*100 > 35);
-    },{passive:true});
+    const updateVisibility = () => {
+      const max = Math.max(1,document.body.scrollHeight - window.innerHeight);
+      strollCta.classList.toggle('active',(window.scrollY / max) * 100 > 35);
+    };
+    window.addEventListener('scroll',updateVisibility,{passive:true});
+    updateVisibility();
   }
 
-  /* Review-only exit popup, independently rotated. */
+  /* REVIEW-ONLY exit recommendation popup. */
   let popupShown = false;
   document.addEventListener('mouseleave',function(e){
     if(e.clientY > 0 || popupShown) return;
-    popupShown = true;
     const target = rotate(reviewPool,5);
     if(!target) return;
+    popupShown = true;
     const popup = document.createElement('div');
     popup.className = 'exit-popup-overlay';
     popup.innerHTML = `
       <div class="exit-popup">
         <h3>Don't Miss Our Recommendation</h3>
-        <p>Our current review model recommends <strong>${target.title}</strong> for this page.</p>
+        <p>ReviewLab currently recommends <strong>${target.title}</strong> for this page.</p>
         <a href="${target.url}" class="cta-btn">Read Full Review →</a>
         <span class="close-popup">✕</span>
       </div>`;
     document.body.appendChild(popup);
     popup.querySelector('.close-popup').onclick = () => popup.remove();
-    popup.addEventListener('click',e=>{if(e.target===popup) popup.remove();});
+    popup.addEventListener('click',e=>{ if(e.target === popup) popup.remove(); });
   });
 });
 </script>
@@ -2836,9 +3006,9 @@ We test AI tools based on real-world performance, monetization potential, and wo
 <!-- 🔥 TOP CTA -->
 <section class="money-cta">
 <h2>#1 Recommended AI Tool</h2>
-<p>Currently the highest-performing tool based on ROI and usability.</p>
-<a href="${SITE_URL}/ai-tools/ai-writing-tools/" class="cta-btn">
-See #1 Tool →
+<p>Currently the highest-performing tool based on ReviewLab's scoring model.</p>
+<a href="${topPosts[0]?.url || SITE_URL + "/ai-tools/"}" class="cta-btn review-cta">
+${topPosts[0] ? `Check Out ${escapeHtml(topPosts[0].title)} →` : "See #1 Tool →"}
 </a>
 </section>
 <!-- 🔥 CATEGORY GRID -->
@@ -2917,7 +3087,7 @@ for (const topic in topics) {
             <tr>
               <td>Overall Score</td>
               ${comparisonCandidates.map(p=>
-                `<td>${Number(p.score?.score || 0) || Math.round(Number(p.product?.rating || 0)*20)}/100</td>`
+                `<td>${p.score?.score || 0}/100</td>`
               ).join("")}
             </tr>
 
@@ -2983,7 +3153,7 @@ ${globalHeader()}
 
         <p>
           Overall Score:
-          <strong>${Number(p.score?.score || 0) || Math.round(Number(p.product?.rating || 0)*20)}/100</strong>
+          <strong>${p.score?.score || 0}/100</strong>
         </p>
       </div>
     `).join("")}
@@ -3043,7 +3213,7 @@ ${globalHeader()}
             Current category leader based on the ReviewLab
             scoring framework.
           </p>
-          <a href="${editorChoice.url}" class="cta-btn category-review-cta">
+          <a href="${editorChoice.url}" class="cta-btn">
             Read Editor's Choice →
           </a>
         </div>
@@ -3069,18 +3239,7 @@ ${globalHeader()}
 ${generateSiteTrustSignals()}
 
 </div>
-<script>
-(() => {
-  const pool = ${JSON.stringify(categoryPosts.map(p=>({title:p.title,url:p.url})))};
-  if (!pool.length) return;
-  const seed = Array.from(location.pathname).reduce((n,ch)=>n + ch.charCodeAt(0),0);
-  document.querySelectorAll(".category-review-cta").forEach((el,i)=>{
-    const item = pool[(seed + i) % pool.length];
-    el.href = item.url;
-    el.textContent = `Read ${item.title} →`;
-  });
-})();
-</script>
+
 </body>
 </html>
 `;
@@ -3339,91 +3498,6 @@ ${authorPosts}
 </html>
 `);
 fs.writeFileSync("_site/_data/posts.json",JSON.stringify(posts,null,2));
-
-/* =========================================================
-   AUTOMATIC DATA SNAPSHOTS
-   Blogger is authoritative for active posts. These files are rebuilt
-   every run, so publishing/unpublishing a post automatically changes
-   the generated datasets without manual product maintenance.
-   ========================================================= */
-const activeProducts = posts
-  .filter(p=>p.isReview && p.product?.name)
-  .map(p=>({
-    slug:p.product.slug || p.slug,
-    name:p.product.name || p.title,
-    brand:p.product.brand || p.product.name || p.title,
-    developer:p.product.developer || "",
-    category:p.category,
-    website:p.product.website || "",
-    price:p.product.price || "",
-    pricingModel:p.product.pricingModel || "",
-    trial:p.product.trial ?? false,
-    refund:p.product.refund ?? false,
-    rating:Number(p.product.rating || 0),
-    reviewed:true,
-    featured:!!p.product.featured,
-    affiliate:p.product.affiliate || "",
-    pros:safeArray(p.pros),
-    cons:safeArray(p.cons),
-    bestFor:safeArray(p.product.bestFor),
-    avoidFor:safeArray(p.product.avoidFor),
-    alternative:safeArray(p.product.alternative),
-    features:safeArray(p.product.features),
-    keywords:safeArray(p.product.keywords),
-    audience:safeArray(p.product.audience),
-    useCases:safeArray(p.product.useCases),
-    strengths:safeArray(p.product.strengths),
-    lastUpdated:p.product.lastUpdated || p.date || "",
-    version:p.product.version || "",
-    platforms:safeArray(p.product.platforms),
-    performance:p.product.performance || {}
-  }));
-
-const activeReviews = posts.filter(p=>p.isReview).map(p=>({
-  productSlug:p.product?.slug || p.slug,
-  reviewedBy:p.reviewData?.reviewedBy || "justin-gerald",
-  testDuration:p.reviewData?.testDuration || "",
-  platforms:safeArray(p.product?.platforms),
-  methodology:safeArray(p.reviewData?.methodology),
-  score:p.score?.score || 0,
-  reviewScore:p.reviewScore || {},
-  pros:p.pros || [],
-  cons:p.cons || []
-}));
-
-const activeVersions = posts.filter(p=>p.isReview).map(p=>({
-  productSlug:p.product?.slug || p.slug,
-  history:safeArray(p.versionHistory).length ? p.versionHistory : (p.product?.version ? [{date:p.product.lastUpdated || p.date,version:p.product.version,changes:["Review generated from current Blogger content"]}] : [])
-}));
-
-const detectedEntityNames = Array.from(new Set(posts.flatMap(p=>safeArray(p.entities))));
-const mergedEntities = Array.from(new Map([
-  ...safeArray(entities).map(e=>[safeString(e.name).toLowerCase(),e]),
-  ...detectedEntityNames.map(name=>[name.toLowerCase(),{name}])
-]).values());
-
-const generatedFaq = posts.flatMap(p=>extractFAQs(p.html).map(question=>({
-  postSlug:p.slug,
-  question
-})));
-
-const generatedComparisons = Array.from(generatedComparisonsMap.entries()).flatMap(([slug,items])=>items.map(item=>({postSlug:slug,...item})));
-
-const generatedRotation = {
-  generatedAt: new Date().toISOString(),
-  reviews: posts.filter(p=>p.isReview).map(p=>({title:p.title,url:p.url,category:p.category,score:Number(p.score?.score||0)})),
-  supporting: posts.filter(p=>p.postType === "supporting").map(p=>({title:p.title,url:p.url,category:p.category}))
-};
-fs.writeFileSync("_site/assets/rotation.json",JSON.stringify(generatedRotation,null,2));
-
-fs.writeFileSync("_site/_data/products.json",JSON.stringify(activeProducts,null,2));
-fs.writeFileSync("_site/_data/reviews.json",JSON.stringify(activeReviews,null,2));
-fs.writeFileSync("_site/_data/versions.json",JSON.stringify(activeVersions,null,2));
-fs.writeFileSync("_site/_data/entities.json",JSON.stringify(mergedEntities,null,2));
-fs.writeFileSync("_site/_data/faq.json",JSON.stringify(generatedFaq,null,2));
-fs.writeFileSync("_site/_data/comparisons.json",JSON.stringify(generatedComparisons,null,2));
-fs.writeFileSync("_site/_data/authors.json",JSON.stringify(authors,null,2));
-fs.writeFileSync("_site/_data/glossary.json",JSON.stringify(glossary,null,2));
 
 const searchIndex = posts.map(p=>({
   title: p.title,
