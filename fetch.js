@@ -1147,7 +1147,9 @@ function extractCurrencyValue(html){
   const text = cleanText(html);
   const labeled = text.match(/(?:price|pricing|cost|starts? at|from)\s*[:\-]?\s*((?:[$€£₦]\s*)?[0-9][0-9,]*(?:\.[0-9]{1,2})?(?:\s*\/\s*(?:month|mo|year|yr|week|week|one[- ]time))?)/i);
   if(labeled?.[1]) return labeled[1].trim();
-  const generic = text.match(/(?:[$€£₦]\s*)[0-9][0-9,]*(?:\.[0-9]{1,2})?(?:\s*\/\s*(?:month|mo|year|yr|week|one[- ]time))?/i);
+  const generic = text.match(
+  /(?:[$€£₦]\s*)[0-9][0-9,]*(?:\.[0-9]{1,2})?(?:\s*\/\s*(?:month|mo|year|yr|week|one[- ]time))?/i
+);
   return generic?.[0]?.trim() || "";
 }
 
@@ -2780,7 +2782,7 @@ window.addEventListener("load", function(){
     if(!target) return;
     btn.href = target.url;
     if(btn.closest('.top-cta') && btn.innerText.includes('See #1 Tool')){
-      btn.innerHTML = `Check Out ${target.title} →`;
+      btn.innerHTML = "Check Out " + target.title + " →";
     }
   });
 
@@ -2798,7 +2800,7 @@ window.addEventListener("load", function(){
     const strollLink = strollCta.querySelector('a');
     if(strollLink){
       strollLink.href = strollTarget.url;
-      strollLink.innerHTML = `Top Choice: ${strollTarget.title} →`;
+      strolllink.innerHTML = "Top Choice: " + primaryPost.title + " →";
     }
     window.addEventListener('scroll', function(){
       const scrollPercent = (window.scrollY / Math.max(1, document.body.scrollHeight - window.innerHeight)) * 100;
@@ -3671,7 +3673,7 @@ posts
 })
 .slice(0,20)
 .forEach(p=>{
-results.innerHTML+=\`<li><a href="\${p.url}" class="post-title">\${p.title}</a></li>\`;
+results.innerHTML += "<li><a href=\"" + p.url + "\" class=\"post-title\">" + p.title + "</a></li>";
 });
 });
 </script>
