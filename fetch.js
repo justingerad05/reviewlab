@@ -349,23 +349,19 @@ function generateReviewTimeline(post){
   const updated =
     post.product?.lastUpdated ||
     history.at(-1)?.date ||
-    post.date ||
     "Not specified";
 
   const version =
     post.product?.version ||
     history.at(-1)?.version ||
-    "Current version";
+    "Not specified";
 
   const duration =
     review.testDuration ||
-    post.product?._testDuration ||
     "Not specified";
 
   const platforms =
-    safeArray(post.product?.platforms).length
-      ? safeArray(post.product?.platforms)
-      : safeArray(review.platforms);
+    safeArray(review.platforms);
 
   return `
   <section class="review-timeline">
@@ -808,37 +804,105 @@ function generateDynamicSidebar(posts){
 
 function generateRadarChart(post){
   if(!post.isReview) return "";
+
   const values = post.score?.reviewScore || {};
+
   const axes = [
-    ["Speed",Number(values.easeOfUse)],
-    ["Accuracy",Number(values.accuracy)],
-    ["Automation",Number(values.automation)],
-    ["Templates",Number(values.features)],
-    ["Support",Number(values.support)],
-    ["Pricing",Number(values.pricing)]
-  ].map(([label,value])=>[label,Number.isFinite(value) ? Math.max(0,Math.min(10,value)) : 5]);
-  const cx=150, cy=150, radius=100;
-  const pointFor=(angle,r)=>[cx+Math.cos(angle)*r,cy+Math.sin(angle)*r];
-  const polygonPoints=axes.map((axis,index)=>{
-    const angle=(-Math.PI/2)+(index*Math.PI*2/axes.length);
-    const [x,y]=pointFor(angle,radius*axis[1]/10);
-    return `${x.toFixed(1)},${y.toFixed(1)}`;
-  }).join(" ");
-  const ringPaths=[1,.75,.5,.25].map(scale=>{
-    const points=axes.map((axis,index)=>{
-      const angle=(-Math.PI/2)+(index*Math.PI*2/axes.length);
-      return pointFor(angle,radius*scale);
-    });
-    const d=points.map(([x,y],i)=>`${i?"L":"M"} ${x.toFixed(1)} ${y.toFixed(1)}`).join(" ")+" Z";
-    return `<path d="${d}" fill="none" stroke="#475569" stroke-width="1.5" opacity=".75" vector-effect="non-scaling-stroke" />`;
-  }).join("");
-  const spokes=axes.map((axis,index)=>{
-    const angle=(-Math.PI/2)+(index*Math.PI*2/axes.length);
-    const [x,y]=pointFor(angle,radius);
-    const [tx,ty]=pointFor(angle,radius+24);
-    return `<line x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="#64748b" stroke-width="1" /><text x="${tx.toFixed(1)}" y="${ty.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-size="10">${escapeHtml(axis[0])}</text>`;
-  }).join("");
-  return `<section class="review-radar"><h2>Performance Profile</h2><svg viewBox="0 0 300 300" role="img" aria-label="Review performance radar chart">${ringPaths}<polygon points="${polygonPoints}" fill="rgba(37,99,235,.18)" stroke="#60a5fa" stroke-width="2" vector-effect="non-scaling-stroke" />${spokes}</svg></section>`;
+    ["Speed",values.easeOfUse || 5],
+    ["Accuracy",values.accuracy || 5],
+    ["Automation",values.automation || 5],
+    ["Templates",values.features || 5],
+    ["Support",values.support || 5],
+    ["Pricing",values.pricing || 5]
+  ];
+
+  const cx = 150;
+  const cy = 150;
+  const radius = 100;
+
+  const points = axes.map((axis,index)=>{
+    const angle =
+      (-Math.PI / 2) +
+      (index * Math.PI * 2 / axes.length);
+
+    const value = Math.max(0,Math.min(10,Number(axis[1])));
+
+    const r = radius * value / 10;
+
+    return [
+      cx + Math.cos(angle) * r,
+      cy + Math.sin(angle) * r
+    ];
+  });
+
+  const polygon = points
+    .map(([x,y])=>`${x.toFixed(1)},${y.toFixed(1)}`)
+    .join(" ");
+
+  return `
+  <section class="review-radar">
+    <h2>Performance Profile</h2>
+
+    <svg viewBox="0 0 300 300"
+         role="img"
+         aria-label="Review performance radar chart">
+
+      ${[1,0.75,0.5,0.25].map(scale=>{
+        const ringPoints = axes.map((axis,index)=>{
+          const angle = (-Math.PI / 2) + (index * Math.PI * 2 / axes.length);
+          const r = radius * scale;
+          return `${(cx + Math.cos(angle)*r).toFixed(1)},${(cy + Math.sin(angle)*r).toFixed(1)}`;
+        }).join(" ");
+        return `<polygon points="${ringPoints}" fill="none" stroke="#475569" stroke-width="1" opacity=".55" />`;
+      }).join("")}
+
+      <polygon
+        points="${polygon}"
+        fill="rgba(37,99,235,.18)"
+        stroke="#2563eb"
+        stroke-width="2"
+      />
+
+      ${axes.map((axis,index)=>{
+        const angle =
+          (-Math.PI / 2) +
+          (index * Math.PI * 2 / axes.length);
+
+        const x =
+          cx + Math.cos(angle) * radius;
+
+        const y =
+          cy + Math.sin(angle) * radius;
+
+        const tx =
+          cx + Math.cos(angle) * (radius + 20);
+
+        const ty =
+          cy + Math.sin(angle) * (radius + 20);
+
+        return `
+          <line
+            x1="${cx}"
+            y1="${cy}"
+            x2="${x}"
+            y2="${y}"
+            stroke="#cbd5e1"
+          />
+
+          <text
+            x="${tx}"
+            y="${ty}"
+            text-anchor="middle"
+            font-size="10"
+          >
+            ${escapeHtml(axis[0])}
+          </text>
+        `;
+      }).join("")}
+
+    </svg>
+  </section>
+  `;
 }
 
 const FEED_URL =
@@ -1098,43 +1162,6 @@ function calculateReviewScore({
   });
 }
 
-function extractLabeledValue(text, labels = []) {
-  const source = cleanText(text);
-  for (const label of labels) {
-    const re = new RegExp(`(?:${label})\\s*[:\\-]\\s*([^\\n|]+)`, "i");
-    const match = source.match(re);
-    if (match?.[1]) return match[1].trim();
-  }
-  return "";
-}
-
-function inferPlatformsFromContent(text = "") {
-  const source = cleanText(text);
-  const known = ["Web", "Windows", "Mac", "macOS", "Linux", "Mobile", "iOS", "Android", "Chrome", "Edge"];
-  return known.filter(platform => new RegExp(`\\b${platform.replace(/[-/]/g,"[-/]?")}\\b`, "i").test(source));
-}
-
-function enrichProductFromContent(product, html, publishedDate = "") {
-  const result = { ...product };
-  const version = extractLabeledValue(html, ["Product Version", "Version"]);
-  const duration = extractLabeledValue(html, ["Test Duration", "Testing Duration", "Duration"]);
-  const website = extractLabeledValue(html, ["Website", "Official Website"]);
-  const price = extractLabeledValue(html, ["Price", "Pricing", "Cost"]);
-  const platforms = extractLabeledValue(html, ["Platforms", "Supported Platforms"]);
-  const trial = extractLabeledValue(html, ["Trial", "Free Trial"]);
-  const refund = extractLabeledValue(html, ["Refund", "Refund Policy"]);
-  const detectedPlatforms = platforms ? platforms.split(/,|\s+\|\s+/).map(x=>x.trim()).filter(Boolean) : inferPlatformsFromContent(html);
-  if (version) result.version = version;
-  if (website) result.website = website;
-  if (price) result.price = price;
-  if (detectedPlatforms.length) result.platforms = detectedPlatforms;
-  if (trial) result.trial = /yes|true|free|day/i.test(trial);
-  if (refund) result.refund = /yes|true|day|money.?back/i.test(refund);
-  if (!result.lastUpdated) result.lastUpdated = publishedDate || "";
-  result._testDuration = result._testDuration || duration;
-  return result;
-}
-
 const seenSlugs = new Set();
 
 const posts=[];
@@ -1144,7 +1171,7 @@ function inferProductData(title, content = "", category = "") {
   const titleText = cleanText(title);
 
   const labeled = (label) => {
-    const re = new RegExp(`${label}\\s*[:\\-]\\s*([^\\n|]+)`, "i");
+    const re = new RegExp(`(?:${label})\\s*[:\\-]\\s*([^\\n|]+)`, "i");
     const m = text.match(re);
     return m ? m[1].trim() : "";
   };
@@ -1287,20 +1314,6 @@ function getProductData(title, content = "") {
   };
 }
 
-function detectCategoryFromLabels(labels = []) {
-  const map = new Map([
-    ["ai-writing", "ai-writing-tools"], ["ai-writing-tools", "ai-writing-tools"], ["writing", "ai-writing-tools"],
-    ["ai-image", "ai-image-generators"], ["ai-image-tools", "ai-image-generators"], ["ai-image-generators", "ai-image-generators"], ["image", "ai-image-generators"],
-    ["ai-voice", "ai-voice-tools"], ["ai-voice-tools", "ai-voice-tools"], ["voice", "ai-voice-tools"], ["voice-tools", "ai-voice-tools"],
-    ["automation", "automation-tools"], ["automation-tools", "automation-tools"], ["ai-automation", "automation-tools"]
-  ]);
-  for (const label of safeArray(labels)) {
-    const normalized = safeLower(label).trim();
-    if (map.has(normalized)) return map.get(normalized);
-  }
-  return "";
-}
-
 function detectTopic(title, html) {
   // 1. First try the existing product enrichment database.
   const sourceProduct = safeArray(products).find(product => {
@@ -1394,12 +1407,9 @@ labels = categories
 .filter(Boolean);
   
 /* NEW AI-DRIVEN CATEGORY ENGINE */
-const labelCategory = detectCategoryFromLabels(labels);
-let category = labelCategory || detectTopic(title, rawHtml);
+let category = detectTopic(title, rawHtml); 
 
-if (!labelCategory && labels.includes("writing") && category !== "ai-writing-tools") {
-  category = "ai-writing-tools";
-}
+if (labels.includes("writing") && category !== "ai-writing-tools") category = "ai-writing-tools";
   
 let baseSlug = title.toLowerCase()
 .replace(/[^a-z0-9]+/g,"-")
@@ -1425,8 +1435,8 @@ Math.ceil(textOnly.split(/\s+/).length / 200)
 /* SCHEMA */
 const wordCount = textOnly.split(/\s+/).length;
 const productMatch = getProductData(title, rawHtml);
-const productInfo = enrichProductFromContent(productMatch || {}, rawHtml, entry.published || "");
-if(productInfo) productInfo.category = category;
+const productInfo = productMatch || {};
+if(productInfo && !productInfo.category) productInfo.category = category;
 if(productInfo && !productInfo.lastUpdated) productInfo.lastUpdated = entry.published || "";
 const structuredProsCons =
   extractStructuredProsCons(rawHtml, productInfo);
@@ -2355,14 +2365,6 @@ const topPosts =
 const ctaJson =
   JSON.stringify(topPosts);
 
-const reviewRotationData = reviewPool.map(post=>({
-  title:post.title, url:post.url, slug:post.slug, category:post.category, score:Number(post.score?.score || 0)
-}));
-
-const supportingRotationData = posts
-  .filter(post=>post.postType === "supporting")
-  .map(post=>({ title:post.title, url:post.url, slug:post.slug, category:post.category }));
-
 posts.forEach(p=>{
  if(!topics[p.category]) topics[p.category]=[];
  topics[p.category].push(p);
@@ -2402,13 +2404,15 @@ fs.mkdirSync(`_site/posts/${post.slug}`,{recursive:true});
 /* SAFE RECOMMENDATION ENGINE */
 const { tocHtml, updatedHtml } = generateToC(post.html);
 const relatedPosts = generateRelatedReviews(post, posts).slice(0,4);
-let inlinePosts = generateSupportingPosts(post, posts, 3);
+let inlinePosts = generateRelatedReviews(post, posts)
+.filter(p=>!relatedPosts.some(r=>r.slug===p.slug))
+.slice(0,3);
 
-/* HARD fallback — Continue Reading stays supporting-only. */
+/* HARD fallback — guarantees links always render */
 if(inlinePosts.length < 3){
 inlinePosts = posts
-  .filter(p=>p.slug!==post.slug && p.postType === "supporting")
-  .slice(0,3);
+.filter(p=>p.slug!==post.slug)
+.slice(0,3);
 }
 const inlineRecs = inlinePosts
 .map(p=>`<li><a href="${p.url}" class="post-title">${p.title}</a></li>`)
@@ -2735,25 +2739,24 @@ hover.classList.remove("hover-centered");
 window.addEventListener("load", function(){
   const reviewPool = ${JSON.stringify(topPosts)};
   const supportingPool = ${JSON.stringify(posts.filter(p=>p.postType === "supporting").map(p=>({title:p.title,url:p.url,category:p.category})))};
+  if(!reviewPool.length) return;
+
   const seed = Array.from(location.pathname).reduce((n,ch)=>n + ch.charCodeAt(0),0);
-  const rotationSlot = Math.floor(Date.now() / 86400000);
-  const rotate = (pool, offset) => pool.length ? pool[Math.abs(seed + rotationSlot + offset) % pool.length] : null;
+  const rotate = (pool, offset) => pool.length ? pool[(seed + offset) % pool.length] : null;
 
   /* REVIEW-ONLY CTA POOL: never replaced with supporting posts. */
   const reviewButtons = document.querySelectorAll(
     '.top-cta .cta-btn, .mid-cta .cta-btn, .decision-cta .cta-btn, .comparison-block .cta-btn, .money-cta .cta-btn, .sticky-main-cta .sidebar-btn'
   );
 
-  if(reviewPool.length){
-    reviewButtons.forEach((btn,index)=>{
-      const target = rotate(reviewPool,index + 1);
-      if(!target) return;
-      btn.href = target.url;
-      if(btn.innerText.includes('See #1 Tool') || btn.innerText.includes('See Tool') || btn.innerText.includes('View #1 Recommendation')){
-        btn.textContent = "Check Out " + target.title + " →";
-      }
-    });
-  }
+  reviewButtons.forEach((btn,index)=>{
+    const target = rotate(reviewPool,index + 1);
+    if(!target) return;
+    btn.href = target.url;
+    if(btn.innerText.includes('See #1 Tool') || btn.innerText.includes('See Tool') || btn.innerText.includes('View #1 Recommendation')){
+      btn.textContent = "Check Out " + target.title + " →";
+    }
+  });
 
   /* Supporting-post links rotate independently. */
   const guideLinks = document.querySelectorAll('.related-guides a, .internal-widget .internal-list a');
@@ -2764,7 +2767,7 @@ window.addEventListener("load", function(){
 
   /* Review-only stroll CTA. */
   const strollCta = document.querySelector('.stroll-main-cta');
-  if(strollCta && reviewPool.length){
+  if(strollCta){
     const strollTarget = rotate(reviewPool,3);
     const link = strollCta.querySelector('a');
     if(link && strollTarget){
@@ -2779,9 +2782,8 @@ window.addEventListener("load", function(){
 
   /* Review-only exit popup, independently rotated. */
   let popupShown = false;
-  if(reviewPool.length){
-    document.addEventListener('mouseleave',function(e){
-      if(e.clientY > 0 || popupShown) return;
+  document.addEventListener('mouseleave',function(e){
+    if(e.clientY > 0 || popupShown) return;
     popupShown = true;
     const target = rotate(reviewPool,5);
     if(!target) return;
@@ -2797,8 +2799,7 @@ window.addEventListener("load", function(){
     document.body.appendChild(popup);
     popup.querySelector('.close-popup').onclick = () => popup.remove();
     popup.addEventListener('click',e=>{if(e.target===popup) popup.remove();});
-    });
-  }
+  });
 });
 </script>
 ${post.isReview ? `
@@ -2861,7 +2862,7 @@ const aiToolsList = Object.keys(topics)
 .map(cat => `
 <li>
 <a href="${SITE_URL}/ai-tools/${cat}/">
-${formatCategoryTitle(cat)} (${topics[cat].filter(p=>p.isReview).length})
+${formatCategoryTitle(cat)} (${topics[cat].length})
 </a>
 </li>
 `).join("");
@@ -2888,20 +2889,10 @@ We test AI tools based on real-world performance, monetization potential, and wo
 <section class="money-cta">
 <h2>#1 Recommended AI Tool</h2>
 <p>Currently the highest-performing tool based on ROI and usability.</p>
-<a href="javascript:void(0)" class="cta-btn review-cta">See #1 Tool →</a>
+<a href="${SITE_URL}/ai-tools/ai-writing-tools/" class="cta-btn">
+See #1 Tool →
+</a>
 </section>
-<script>
-window.addEventListener("load",function(){
-  const pool=${JSON.stringify(reviewRotationData)};
-  const btn=document.querySelector(".money-cta .review-cta");
-  if(!pool.length||!btn)return;
-  const seed=Array.from(location.pathname).reduce((n,ch)=>n+ch.charCodeAt(0),0);
-  const slot=Math.floor(Date.now()/86400000);
-  const target=pool[Math.abs(seed+slot)%pool.length];
-  btn.href=target.url;
-  btn.textContent="Check Out "+target.title+" →";
-});
-</script>
 <!-- 🔥 CATEGORY GRID -->
 <section class="hub-grid">
 ${Object.keys(topics).map(cat => `
@@ -3432,9 +3423,9 @@ const activeProducts = posts
 const activeReviews = posts.filter(p=>p.isReview).map(p=>({
   productSlug:p.product?.slug || p.slug,
   reviewedBy:p.reviewData?.reviewedBy || "justin-gerald",
-  testDuration:p.reviewData?.testDuration || p.product?._testDuration || "",
+  testDuration:p.reviewData?.testDuration || "",
   platforms:safeArray(p.product?.platforms),
-  methodology:safeArray(p.reviewData?.methodology).length ? safeArray(p.reviewData?.methodology) : ["Installation","Setup","Speed","Output Quality","Customer Support","Pricing","Refund","Updates","Competition","Overall Score"],
+  methodology:safeArray(p.reviewData?.methodology),
   score:p.score?.score || 0,
   reviewScore:p.reviewScore || {},
   pros:p.pros || [],
@@ -3467,14 +3458,6 @@ fs.writeFileSync("_site/_data/faq.json",JSON.stringify(generatedFaq,null,2));
 fs.writeFileSync("_site/_data/comparisons.json",JSON.stringify(generatedComparisons,null,2));
 fs.writeFileSync("_site/_data/authors.json",JSON.stringify(authors,null,2));
 fs.writeFileSync("_site/_data/glossary.json",JSON.stringify(glossary,null,2));
-
-fs.writeFileSync("_site/assets/rotation.json",JSON.stringify({
-  generatedAt:new Date().toISOString(), source:"Blogger", reviews:reviewRotationData, supporting:supportingRotationData
-},null,2));
-
-fs.writeFileSync("_site/_data/build-status.json",JSON.stringify({
-  generatedAt:new Date().toISOString(), source:"Blogger", posts:posts.length, reviews:activeReviews.length, products:activeProducts.length, versions:activeVersions.length, supportingPosts:supportingRotationData.length
-},null,2));
 
 const searchIndex = posts.map(p=>({
   title: p.title,
