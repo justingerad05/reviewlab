@@ -216,21 +216,194 @@ function extractScoreFromContent(html, label){
     : null;
 }
 
-function buildReviewScore({
-  html,
-  product,
-  pros,
-  cons,
-  isReview,
-  reviewData = {}
-}){
+function extractScoreFromContent(html, label){
+  const text = cleanText(html);
+
+  const regex = new RegExp(
+    `${label}[^0-9]{0,40}(10|[0-9](?:\.\d+)?)\s*(?:\/\s*10|out of 10)?`,
+    "i"
+  );
+
+  const match = text.match(regex);
+  if(!match) return null;
+
+  const value = Number(match[1]);
+  return Number.isFinite(value)
+    ? Math.min(10,Math.max(0,value))
+    : null;
+}
+
+function extractReviewMetadata(title, html, labels = [], fallbackCategory = ""){
+  const text = cleanText(html);
+  const source = `${title}\n${text}`;
+
+  const firstMatch = patterns => {
+    for(const pattern of patterns){
+      const match = source.match(pattern);
+      if(match && match[1]) return match[1].trim();
+    }
+    return "";
+  };
+
+  let productName = firstMatch([
+    /(?:^|\n|\b)Product(?: Name)?\s*:\s*([^\n|•]+)/i,
+    /(?:^|\n|\b)Tool(?: Name)?\s*:\s*([^\n|•]+)/i,
+    /(?:^|\n|\b)Software(?: Name)?\s*:\s*([^\n|•]+)/i,
+    /(?:^|\n|\b)Reviewed Product\s*:\s*([^\n|•]+)/i
+  ]);
+
+  if(!productName){
+    const headingMatch = html.match(/<h[1-3][^>]*>\s*([^<]{2,100}?)\s*(?:Review|Testing|Test|Overview|Analysis)\s*<\/h[1-3]>/i);
+    if(headingMatch && headingMatch[1]) productName = cleanText(headingMatch[1]);
+  }
+
+  const website = firstMatch([
+    /(?:^|\n|\b)(?:Website|Official Website|Product Website)\s*:\s*(https?:\/\/[^\s<]+)/i
+  ]);
+
+  const version = firstMatch([
+    /(?:^|\n|\b)Product\s+Version\s*:\s*([0-9]+(?:\.[0-9]+){0,3})/i,
+    /(?:^|\n|\b)Version\s*:\s*([0-9]+(?:\.[0-9]+){0,3})/i,
+    /(?:^|\n|\b)Ver\.?\s*[:#-]?\s*([0-9]+(?:\.[0-9]+){0,3})/i
+  ]);
+
+  const testDuration = firstMatch([
+    /(?:^|\n|\b)Test\s+Duration\s*:\s*([0-9]+\s*(?:day|days|week|weeks|month|months))/i,
+    /(?:^|\n|\b)Tested\s+for\s+([0-9]+\s*(?:day|days|week|weeks|month|months))/i,
+    /(?:^|\n|\b)Testing\s+Duration\s*:\s*([0-9]+\s*(?:day|days|week|weeks|month|months))/i
+  ]);
+
+  const reviewedBy = firstMatch([
+    /(?:^|\n|\b)Reviewed\s+by\s*:\s*([^\n|•]+)/i,
+    /(?:^|\n|\b)Tested\s+by\s*:\s*([^\n|•]+)/i
+  ]);
+
+  const rawPlatforms = firstMatch([
+    /(?:^|\n|\b)Platforms?\s*:\s*([^\n]+)/i,
+    /(?:^|\n|\b)Platform\s*:\s*([^\n]+)/i
+  ]);
+
+  const platformNames = ["Windows","Mac","Web","Mobile","iOS","Android","Linux","ChromeOS"];
+  const platforms = platformNames.filter(platform =>
+    new RegExp(`\\b${platform.replace(/[.*+?^${}()|[\\]\\\\]/g,"\\$&")}\\b`,"i")
+      .test(rawPlatforms || text)
+  );
+
+  const price = firstMatch([
+    /(?:^|\n|\b)Price\s*:\s*([^\n|•]+)/i,
+    /(?:^|\n|\b)Pricing\s*:\s*([^\n|•]+)/i
+  ]) || ((text.match(/(?:[$€£₦]\s*)[0-9][0-9,]*(?:\.[0-9]{1,2})?(?:\s*\/\s*(?:month|mo|year|yr|week|one[- ]time))?/i) || [""])[0]);
+
+  const categoryText = firstMatch([
+    /(?:^|\n|\b)Category\s*:\s*([^\n|•]+)/i,
+    /(?:^|\n|\b)Niche\s*:\s*([^\n|•]+)/i
+  ]);
+
+  const trialText = firstMatch([
+    /(?:^|\n|\b)Trial\s*:\s*([^\n|•]+)/i,
+    /(?:^|\n|\b)Free\s+Trial\s*:\s*([^\n|•]+)/i
+  ]);
+
+  const refundText = firstMatch([
+    /(?:^|\n|\b)Refund\s*:\s*([^\n|•]+)/i,
+    /(?:^|\n|\b)Money[- ]Back\s*:\s*([^\n|•]+)/i
+  ]);
+
+  const normalizeCategory = value => {
+    const v = safeLower(value).replace(/[_-]+/g," ").replace(/\s+/g," ").trim();
+    if(/voice|speech|audio|text to speech|tts/.test(v)) return "ai-voice-tools";
+    if(/image|art|design|photo/.test(v)) return "ai-image-generators";
+    if(/automation|workflow|agent|integration/.test(v)) return "automation-tools";
+    if(/writing|copy|content|seo/.test(v)) return "ai-writing-tools";
+    return "";
+  };
+
+  const category = normalizeCategory(categoryText) || normalizeCategory(labels.join(" ")) || fallbackCategory || "";
+
+  return {
+    productName: productName.replace(/\s+$/,""),
+    website: website.replace(/[),.;]+$/,""),
+    version,
+    testDuration,
+    reviewedBy,
+    platforms,
+    price,
+    category,
+    trial: trialText ? !/no|none|not available|n\/a/i.test(trialText) : /\bfree trial\b|\btrial\b/i.test(text),
+    refund: refundText ? !/no|none|not available|n\/a/i.test(refundText) : /\brefund\b|\bmoney[- ]back\b/i.test(text)
+  };
+}
+
+function evidenceDimensionScore(text, positivePatterns, negativePatterns, base = 5){
+  let score = base;
+  let positive = 0;
+  let negative = 0;
+
+  for(const pattern of positivePatterns){
+    const matches = text.match(pattern);
+    if(matches) positive += Math.min(3,matches.length);
+  }
+
+  for(const pattern of negativePatterns){
+    const matches = text.match(pattern);
+    if(matches) negative += Math.min(3,matches.length);
+  }
+
+  score += Math.min(3,positive) - Math.min(3,negative);
+  return Math.max(1,Math.min(10,Number(score.toFixed(1))));
+}
+
+function deriveReviewDimensions({html, product, pros = [], cons = []}){
+  const text = cleanText(html).toLowerCase();
+  const prosText = safeArray(pros).join(" ").toLowerCase();
+  const consText = safeArray(cons).join(" ").toLowerCase();
+  const evidence = `${text} ${prosText} ${consText}`;
+
+  const dimensions = {
+    features: evidenceDimensionScore(
+      evidence,
+      [/\bfeature\w*\b/g,/\btemplate\w*\b/g,/\btool\w*\b/g,/\bfunction\w*\b/g,/\bcapabilit\w*\b/g],
+      [/\bmissing\b/g,/\black(?:s|ing)?\b/g,/\blimited\b/g]
+    ),
+    easeOfUse: evidenceDimensionScore(
+      evidence,
+      [/\beasy\b/g,/\beasier\b/g,/\bsimple\b/g,/\bintuitive\b/g,/\buser[- ]friendly\b/g,/\bquickly\b/g],
+      [/\bconfusing\b/g,/\bdifficult\b/g,/\bcomplicated\b/g,/\bsteep learning\b/g,/\bfriction\b/g]
+    ),
+    pricing: evidenceDimensionScore(
+      evidence,
+      [/\baffordable\b/g,/\bgood value\b/g,/\bworth the price\b/g,/\bvalue\b/g,/\bcheap\b/g,/\breasonable\b/g],
+      [/\bexpensive\b/g,/\boverpriced\b/g,/\bcostly\b/g,/\bpricey\b/g,/\btoo expensive\b/g]
+    ),
+    support: evidenceDimensionScore(
+      evidence,
+      [/\bsupport\b/g,/\bcustomer service\b/g,/\bhelp center\b/g,/\bresponsive\b/g,/\bhelpful\b/g],
+      [/\bunresponsive\b/g,/\bpoor support\b/g,/\bslow support\b/g,/\bno response\b/g]
+    ),
+    automation: evidenceDimensionScore(
+      evidence,
+      [/\bautomation\b/g,/\bautomate\w*\b/g,/\bworkflow\b/g,/\bintegration\b/g,/\bagent\b/g,/\bapi\b/g],
+      [/\bmanual\b/g,/\bmanually\b/g,/\bno automation\b/g,/\blimited automation\b/g]
+    ),
+    accuracy: evidenceDimensionScore(
+      evidence,
+      [/\baccurate\b/g,/\baccuracy\b/g,/\bhigh quality\b/g,/\bquality output\b/g,/\breliable\b/g,/\bconsistent\b/g,/\bhuman[- ]like\b/g],
+      [/\binaccurate\b/g,/\berror\w*\b/g,/\bincorrect\b/g,/\bpoor quality\b/g,/\binconsistent\b/g]
+    )
+  };
+
+  /* Let concrete product evidence nudge dimensions without replacing it. */
+  if(safeArray(product?.features).length >= 8) dimensions.features = Math.max(dimensions.features,8);
+  if(safeArray(product?.platforms).length >= 3) dimensions.features = Math.max(dimensions.features,7);
+  if(product?.trial === true) dimensions.pricing = Math.max(dimensions.pricing,6);
+  if(product?.refund === true) dimensions.pricing = Math.max(dimensions.pricing,6);
+
+  return dimensions;
+}
+
+function buildReviewScore({html, product, pros, cons, isReview, reviewData = {}}){
   if(!isReview){
-    return {
-      score: 0,
-      ratingValue: "0.0",
-      reviewScore: {},
-      breakdown: {}
-    };
+    return {score:0,ratingValue:"0.0",reviewScore:{},breakdown:{}};
   }
 
   const categories = [
@@ -244,59 +417,49 @@ function buildReviewScore({
 
   const reviewScore = {};
   const scoreSource = {};
+  const derived = deriveReviewDimensions({html,product,pros,cons});
   const configuredScores = reviewData?.scores || {};
-  const productScores = product?.reviewScore || {};
 
   categories.forEach(([key,label])=>{
-    const extracted = extractScoreFromContent(html,label);
-
-    if(extracted !== null){
-      reviewScore[key] = extracted;
-      scoreSource[key] = "review-content";
+    const explicit = extractScoreFromContent(html,label);
+    if(explicit !== null){
+      reviewScore[key] = explicit;
+      scoreSource[key] = "review-content-explicit";
       return;
     }
 
     const configured = Number(configuredScores[key]);
     if(Number.isFinite(configured) && configured >= 0 && configured <= 10){
       reviewScore[key] = configured;
-      scoreSource[key] = "reviews.json";
+      scoreSource[key] = "legacy-enrichment";
       return;
     }
 
-    const productValue = Number(productScores[key]);
-    if(Number.isFinite(productValue) && productValue >= 0 && productValue <= 10){
-      reviewScore[key] = productValue;
-      scoreSource[key] = "products.json";
-      return;
-    }
+    reviewScore[key] = derived[key];
+    scoreSource[key] = "review-content-evidence";
   });
 
-  const values = Object.values(reviewScore).filter(Number.isFinite);
-
-  const finalScore = values.length
-    ? values.reduce((a,b)=>a+b,0) / values.length
-    : 0;
-
-  const score100 = values.length
-    ? Math.round(finalScore * 10)
-    : 0;
+  const values = categories.map(([key])=>Number(reviewScore[key])).filter(Number.isFinite);
+  const finalScore = values.reduce((a,b)=>a+b,0) / values.length;
+  const score100 = Math.round(finalScore * 10);
 
   return {
     score: score100,
-    ratingValue: values.length ? (score100 / 20).toFixed(1) : "0.0",
+    ratingValue: (score100 / 20).toFixed(1),
     reviewScore,
-    breakdown: {
-      features: reviewScore.features,
-      easeOfUse: reviewScore.easeOfUse,
-      pricing: reviewScore.pricing,
-      support: reviewScore.support,
-      automation: reviewScore.automation,
-      accuracy: reviewScore.accuracy,
-      dimensionsScored: values.length,
-      dimensionsTotal: categories.length,
+    breakdown:{
+      features:reviewScore.features,
+      easeOfUse:reviewScore.easeOfUse,
+      pricing:reviewScore.pricing,
+      support:reviewScore.support,
+      automation:reviewScore.automation,
+      accuracy:reviewScore.accuracy,
+      dimensionsScored:values.length,
+      dimensionsTotal:categories.length,
       scoreSource,
-      prosCount: pros.length,
-      consCount: cons.length
+      prosCount:pros.length,
+      consCount:cons.length,
+      scoreMethod:"canonical-content-evidence"
     }
   };
 }
@@ -323,14 +486,19 @@ function generateReviewTimeline(post){
     "Not specified";
 
   const duration =
-    review.testDuration ||
     post.product?.inferredTestDuration ||
+    review.testDuration ||
     "Not specified";
 
   const platforms =
-    safeArray(review.platforms).length
-      ? safeArray(review.platforms)
-      : safeArray(post.product?.platforms);
+    safeArray(post.product?.platforms).length
+      ? safeArray(post.product?.platforms)
+      : safeArray(review.platforms);
+
+  const reviewedBy =
+    post.product?.reviewedBy ||
+    review.reviewedBy ||
+    "Justin Gerald";
 
   return `
   <section class="review-timeline">
@@ -367,6 +535,7 @@ function generateReviewTimeline(post){
         <strong>Reviewed by</strong>
         <span>${escapeHtml(
           getAuthorData(review.reviewedBy)?.name ||
+          escapeHtml(reviewedBy) ||
           "Justin Gerald"
         )}</span>
       </div>
@@ -706,9 +875,13 @@ function detectEntities(text){
 }
 
 function generateEntitySchema(post){
-  const names = detectEntities(
-    `${post.title} ${post.description} ${post.html}`
-  );
+  const names = [...new Set([
+    ...detectEntities(`${post.title} ${post.description} ${post.html}`),
+    ...safeArray(post.entities),
+    post.product?.name,
+    post.product?.brand,
+    post.product?.developer
+  ].filter(Boolean))];
 
   if(!names.length) return null;
 
@@ -992,14 +1165,14 @@ function loadJson(filePath, fallback){
   Blogger remains the active content source, and generated
   snapshots are rebuilt later from the current feed.
 */
-const products = loadJson("./_data/products.json", []);
-const entities = loadJson("./_data/entities.json", []);
-const comparisonsData = loadJson("./_data/comparisons.json", []);
-const authors = loadJson("./_data/authors.json", []);
-const faqData = loadJson("./_data/faq.json", []);
-const reviewsData = loadJson("./_data/reviews.json", []);
-const glossary = loadJson("./_data/glossary.json", []);
-const versions = loadJson("./_data/versions.json", []);
+let products = loadJson("./_data/products.json", []);
+let entities = loadJson("./_data/entities.json", []);
+let comparisonsData = loadJson("./_data/comparisons.json", []);
+let authors = loadJson("./_data/authors.json", []);
+let faqData = loadJson("./_data/faq.json", []);
+let reviewsData = loadJson("./_data/reviews.json", []);
+let glossary = loadJson("./_data/glossary.json", []);
+let versions = loadJson("./_data/versions.json", []);
 
 const SITE_URL = site.url;
 
@@ -1245,48 +1418,43 @@ const seenSlugs = new Set();
 
 const posts=[];
 
-function inferProductDataFromPost(title, html, category, pros = [], cons = []){
+function inferProductDataFromPost(title, html, category, pros = [], cons = [], labels = []){
   const plain = cleanText(html);
+  const metadata = extractReviewMetadata(title, html, labels, category);
+
   const normalizedTitle = safeString(title)
     .replace(/\b(honest|in-depth|deep|complete|ultimate|2024|2025|2026|review|product review)\b/gi," ")
     .replace(/[-–—|:()[\]{}]/g," ")
     .replace(/\s+/g," ")
     .trim();
 
-  const name = normalizedTitle || title;
-
-  const priceMatch = plain.match(/(?:[$€£₦]\s*)[0-9][0-9,]*(?:\.[0-9]{1,2})?(?:\s*\/\s*(?:month|mo|year|yr|week|one[- ]time))?/i);
-  const versionMatch = plain.match(/\b(?:version|ver\.?)\s*[:#-]?\s*([0-9]+(?:\.[0-9]+){0,3})\b/i);
-  const durationMatch = plain.match(/\b([0-9]+)\s*(?:day|days|week|weeks|month|months)\b/i);
-
-  const platformNames = ["Windows","Mac","Web","Mobile","iOS","Android","Linux"];
-  const platforms = platformNames.filter(platform =>
-    new RegExp(`\\b${platform.replace(/[.*+?^${}()|[\\]\\\\]/g,"\\$&")}\\b`,"i").test(plain)
-  );
-
-  const trialMatch = plain.match(/\b(?:free trial|trial)\b/i);
-  const refundMatch = plain.match(/\b(?:refund|money[- ]back)\b/i);
+  const name = metadata.productName || normalizedTitle || title;
+  const priceMatch = metadata.price || ((plain.match(/(?:[$€£₦]\s*)[0-9][0-9,]*(?:\.[0-9]{1,2})?(?:\s*\/\s*(?:month|mo|year|yr|week|one[- ]time))?/i) || [""])[0]);
 
   const keywordSet = new Set();
-  [title, category, plain].join(" ").toLowerCase()
+  [title, name, metadata.category || category, plain].join(" ").toLowerCase()
     .split(/[^a-z0-9]+/)
     .filter(word => word.length >= 4)
-    .slice(0,120)
+    .slice(0,180)
     .forEach(word => keywordSet.add(word));
 
+  const slug = safeString(name).toLowerCase()
+    .replace(/[^a-z0-9]+/g,"-")
+    .replace(/^-|-$/g,"") || safeString(title).toLowerCase()
+    .replace(/[^a-z0-9]+/g,"-")
+    .replace(/^-|-$/g,"");
+
   return {
-    slug: safeString(title).toLowerCase()
-      .replace(/[^a-z0-9]+/g,"-")
-      .replace(/^-|-$/g,""),
+    slug,
     name,
     brand: name,
     developer: "",
-    category: category || "ai-writing-tools",
-    website: "",
-    price: priceMatch ? priceMatch[0] : "",
-    pricingModel: priceMatch && /one[- ]time/i.test(priceMatch[0]) ? "One-time" : "",
-    trial: !!trialMatch,
-    refund: !!refundMatch,
+    category: metadata.category || category || "ai-writing-tools",
+    website: metadata.website || "",
+    price: priceMatch || "",
+    pricingModel: /one[- ]time/i.test(priceMatch) ? "One-time" : (/\/\s*(month|mo|year|yr|week)/i.test(priceMatch) ? "Subscription" : ""),
+    trial: metadata.trial,
+    refund: metadata.refund,
     rating: 0,
     reviewed: true,
     featured: false,
@@ -1297,16 +1465,17 @@ function inferProductDataFromPost(title, html, category, pros = [], cons = []){
     avoidFor: [],
     alternative: [],
     features: [],
-    keywords: [...keywordSet].slice(0,30),
+    keywords: [...keywordSet].slice(0,40),
     audience: [],
     useCases: [],
     strengths: [],
     lastUpdated: "",
-    version: versionMatch ? versionMatch[1] : "",
-    platforms,
+    version: metadata.version || "",
+    platforms: metadata.platforms,
     performance: {},
     reviewScore: {},
-    inferredTestDuration: durationMatch ? durationMatch[0] : ""
+    inferredTestDuration: metadata.testDuration || "",
+    reviewedBy: metadata.reviewedBy || "Justin Gerald"
   };
 }
 
@@ -1474,7 +1643,8 @@ labels = categories
   .filter(Boolean);
   
 /* NEW AI-DRIVEN CATEGORY ENGINE */
-let category = detectTopic(title, rawHtml); 
+const extractedMetadata = extractReviewMetadata(title, rawHtml, labels, "");
+let category = extractedMetadata.category || detectTopic(title, rawHtml); 
 
 if (labels.includes("writing") && category !== "ai-writing-tools") category = "ai-writing-tools";
   
@@ -1564,7 +1734,8 @@ if(isReview && !productMatch){
     rawHtml,
     category,
     pros,
-    cons
+    cons,
+    labels
   );
   productInfo.lastUpdated = productInfo.lastUpdated || entry.published || "";
   productInfo.category = productInfo.category || category || "ai-writing-tools";
@@ -1573,9 +1744,21 @@ if(isReview && !productMatch){
 }
 
 if(isReview && productMatch){
-  productMatch.slug = productMatch.slug || slug;
-  productMatch.name = productMatch.name || title;
-  productMatch.category = productMatch.category || category || "ai-writing-tools";
+  /* Blogger content is authoritative for metadata found in the post. */
+  productMatch.slug = extractedMetadata.productName
+    ? safeString(extractedMetadata.productName).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")
+    : (productMatch.slug || slug);
+  productMatch.name = extractedMetadata.productName || productMatch.name || title;
+  productMatch.category = extractedMetadata.category || productMatch.category || category || "ai-writing-tools";
+  productMatch.website = extractedMetadata.website || productMatch.website || "";
+  productMatch.price = extractedMetadata.price || productMatch.price || "";
+  productMatch.version = extractedMetadata.version || productMatch.version || "";
+  productMatch.platforms = extractedMetadata.platforms.length ? extractedMetadata.platforms : safeArray(productMatch.platforms);
+  productMatch.trial = extractedMetadata.trial || productMatch.trial || false;
+  productMatch.refund = extractedMetadata.refund || productMatch.refund || false;
+  productMatch.inferredTestDuration = extractedMetadata.testDuration || productMatch.inferredTestDuration || "";
+  productMatch.reviewedBy = extractedMetadata.reviewedBy || productMatch.reviewedBy || "Justin Gerald";
+  productMatch.lastUpdated = productMatch.lastUpdated || entry.published || "";
 }
 
 const reviewData = getReviewData(productInfo.slug);
@@ -1681,7 +1864,12 @@ posts.push({
 reviewBreakdown: reviewScore.breakdown || {},
 pros,
 cons,
-entities: detectEntities(`${title} ${rawHtml}`),
+entities: [...new Set([
+    ...detectEntities(`${title} ${rawHtml}`),
+    productInfo.name,
+    productInfo.brand,
+    productInfo.developer
+  ].filter(Boolean))],
 reviewData: getReviewData(productInfo.slug),
 versionHistory: getVersionHistory(productInfo.slug),
   postType: isReview ? "review" : "supporting",
@@ -1744,7 +1932,11 @@ const generatedProducts = activeReviews.map(post => ({
   pros: safeArray(post.pros),
   cons: safeArray(post.cons),
   lastUpdated: post.product.lastUpdated || post.date,
-  reviewScore: post.score?.reviewScore || post.product.reviewScore || {}
+  reviewScore: post.score?.reviewScore || post.product.reviewScore || {},
+  reviewedBy: post.product.reviewedBy || "Justin Gerald",
+  testDuration: post.product.inferredTestDuration || "",
+  version: post.product.version || "",
+  platforms: safeArray(post.product.platforms)
 }));
 
 const generatedReviews = activeReviews.map(post => {
@@ -1754,14 +1946,12 @@ const generatedReviews = activeReviews.map(post => {
     ...existing,
     productSlug: post.product.slug || post.slug,
     testDuration:
-      existing.testDuration ||
       post.product.inferredTestDuration ||
+      existing.testDuration ||
       "",
-    platforms: safeArray(
-      existing.platforms?.length
-        ? existing.platforms
-        : post.product.platforms
-    ),
+    platforms: safeArray(post.product.platforms).length
+      ? safeArray(post.product.platforms)
+      : safeArray(existing.platforms),
     methodology: safeArray(existing.methodology).length
       ? existing.methodology
       : [
@@ -1776,7 +1966,9 @@ const generatedReviews = activeReviews.map(post => {
           "Competition",
           "Overall Score"
         ],
-    reviewedBy: existing.reviewedBy || "justin-gerald"
+    reviewedBy: post.product.reviewedBy || existing.reviewedBy || "justin-gerald",
+    scores: post.score?.reviewScore || existing.scores || {},
+    scoreBreakdown: post.score?.breakdown || existing.scoreBreakdown || {}
   };
 });
 
@@ -1794,6 +1986,108 @@ const generatedVersions = activeReviews.map(post => {
         }]
   };
 });
+
+function extractFAQEntriesFromPost(post){
+  const html = safeString(post.html);
+  const entries = [];
+  const regex = /<h[2-4][^>]*>\s*([^<]*\?)\s*<\/h[2-4]>([\s\S]*?)(?=<h[2-4][^>]*>|$)/gi;
+  let match;
+  while((match = regex.exec(html)) !== null){
+    const answer = cleanText(match[2]).slice(0,600);
+    if(answer){
+      entries.push({
+        question: cleanText(match[1]),
+        answer,
+        productSlug: post.product?.slug || post.slug,
+        url: post.url
+      });
+    }
+  }
+  return entries.slice(0,8);
+}
+
+const generatedEntities = [...new Map(
+  posts.flatMap(post => safeArray(post.entities).map(name => [safeLower(name), {
+    name,
+    type: "SoftwareApplication",
+    mentions: posts.filter(p => safeArray(p.entities).some(e => safeLower(e) === safeLower(name))).map(p => p.slug)
+  }])).filter(([key]) => key)
+).values()];
+
+const generatedAuthors = [...new Map(
+  posts.filter(p => p.isReview).map(post => {
+    const name = post.product?.reviewedBy || "Justin Gerald";
+    const slug = safeLower(name).replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
+    return [slug, {
+      slug,
+      name,
+      role: "ReviewLab Reviewer",
+      url: `${SITE_URL}/author/`
+    }];
+  })
+)].map(([,value])=>value);
+
+if(!generatedAuthors.length){
+  generatedAuthors.push({slug:"justin-gerald",name:"Justin Gerald",role:"ReviewLab Reviewer",url:`${SITE_URL}/author/`});
+}
+
+const generatedFaq = posts.flatMap(extractFAQEntriesFromPost);
+
+const glossaryTerms = [
+  ["Artificial Intelligence","artificial intelligence"],
+  ["Machine Learning","machine learning"],
+  ["Prompt Engineering","prompt engineering"],
+  ["Automation","automation"],
+  ["LLM","llm"],
+  ["Inference","inference"],
+  ["API","api"],
+  ["Token","token"],
+  ["Embedding","embedding"],
+  ["Fine Tuning","fine tuning|fine-tuning"]
+];
+
+const generatedGlossary = glossaryTerms.map(([name,pattern])=>{
+  const regex = new RegExp(`[^.!?]{0,180}\\b(?:${pattern})\\b[^.!?]{0,280}[.!?]`,"i");
+  const source = posts.find(post => regex.test(cleanText(post.html)));
+  const definition = source
+    ? (cleanText(source.html).match(regex)?.[0] || `This term appears in ReviewLab content about ${name}.`).trim()
+    : `This term is part of the AI and technology topics covered by ReviewLab.`;
+  return {
+    name,
+    slug: safeLower(name).replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,""),
+    definition,
+    sourceUrl: source?.url || ""
+  };
+});
+
+/* Canonical generated datasets replace manual enrichment as the build source of truth. */
+products = generatedProducts;
+reviewsData = generatedReviews;
+versions = generatedVersions;
+entities = generatedEntities;
+authors = generatedAuthors;
+faqData = generatedFaq;
+glossary = generatedGlossary;
+
+const generatedComparisonRecords = [];
+const reviewOnly = posts.filter(p => p.isReview && p.product);
+for(let i=0;i<reviewOnly.length;i++){
+  for(let j=i+1;j<reviewOnly.length;j++){
+    const a = reviewOnly[i];
+    const b = reviewOnly[j];
+    generatedComparisonRecords.push({
+      slug: `${a.slug}-vs-${b.slug}`,
+      title: `${a.product?.name || a.title} vs ${b.product?.name || b.title}`,
+      products: [a.product?.slug || a.slug, b.product?.slug || b.slug],
+      scores: {
+        [a.product?.slug || a.slug]: a.score?.score || 0,
+        [b.product?.slug || b.slug]: b.score?.score || 0
+      },
+      urls: [a.url,b.url]
+    });
+  }
+}
+comparisonsData = generatedComparisonRecords;
 
 const reviewRotationData = activeReviews.map(post => ({
   title: post.title,
@@ -1835,6 +2129,12 @@ fs.writeFileSync(
     supporting: supportingRotationData
   },null,2)
 );
+
+fs.writeFileSync("_site/_data/entities.json", JSON.stringify(generatedEntities,null,2));
+fs.writeFileSync("_site/_data/comparisons.json", JSON.stringify(generatedComparisonRecords,null,2));
+fs.writeFileSync("_site/_data/authors.json", JSON.stringify(generatedAuthors,null,2));
+fs.writeFileSync("_site/_data/faq.json", JSON.stringify(generatedFaq,null,2));
+fs.writeFileSync("_site/_data/glossary.json", JSON.stringify(generatedGlossary,null,2));
 
 console.log("AUTO DATA: active reviews =", activeReviews.length);
 console.log("AUTO DATA: products.json =", generatedProducts.length);
@@ -3732,11 +4032,8 @@ fs.copyFileSync("assets/og-default.jpg","_site/assets/og-default.jpg");
 fs.copyFileSync("assets/og-cta-tested.jpg","_site/assets/og-cta-tested.jpg");
 fs.copyFileSync("assets/email.js","_site/assets/email.js");
 
-/* Copy authority data into the generated build */
-for(const dataFile of ["site.json","entities.json","comparisons.json","authors.json","faq.json","glossary.json"]){
-  const source = dataFile === "site.json" ? `_data/${dataFile}` : `_data/${dataFile}`;
-  if(fs.existsSync(source)) fs.copyFileSync(source, `_site/_data/${dataFile}`);
-}
+/* Site configuration is static; all authority datasets above are generated automatically. */
+if(fs.existsSync("_data/site.json")) fs.copyFileSync("_data/site.json","_site/_data/site.json");
 
 /* =========================
    HOMEPAGE + PAGINATION
