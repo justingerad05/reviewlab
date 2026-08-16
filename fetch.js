@@ -1615,14 +1615,20 @@ rawHtml = rawHtml.replace(
   ""
 );
   
-/* SAFE LABEL EXTRACTION */
+/* SAFE LABEL EXTRACTION — NORMALIZED */
 let labels = [];
 
 const categories = safeArray(entry.category);
 
 labels = categories
   .map(c => safeLower(c?.term))
-  .map(label => label.replace(/[_-]+/g," ").replace(/\s+/g," ").trim())
+  .map(label =>
+    label
+      .replace(/[_]+/g, " ")
+      .replace(/[-]+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+  )
   .filter(Boolean);
   
 /* NEW AI-DRIVEN CATEGORY ENGINE */
@@ -1678,16 +1684,22 @@ const lowerTitle = title.toLowerCase();
    "better", "results", "rating", "working", etc. from being treated
    as reviews.
 */
+/* POST TYPE — NORMALIZED BLOGGER LABEL AUTHORITY */
+const normalizedLabels = labels.map(label =>
+  safeLower(label)
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+);
+
 const hasReviewLabel =
-  labels.includes("review") ||
-  labels.includes("main review") ||
-  labels.includes("product review") ||
-  labels.includes("main product review");
+  normalizedLabels.includes("review") ||
+  normalizedLabels.includes("main review");
 
 const hasSupportingLabel =
-  labels.includes("supporting") ||
-  labels.includes("support") ||
-  labels.includes("supporting article");
+  normalizedLabels.includes("supporting") ||
+  normalizedLabels.includes("support") ||
+  normalizedLabels.includes("supporting article");
 
 let isReview = false;
 
