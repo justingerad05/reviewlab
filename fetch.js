@@ -216,23 +216,6 @@ function extractScoreFromContent(html, label){
     : null;
 }
 
-function extractScoreFromContent(html, label){
-  const text = cleanText(html);
-
-  const regex = new RegExp(
-    `${label}[^0-9]{0,40}(10|[0-9](?:\.\d+)?)\s*(?:\/\s*10|out of 10)?`,
-    "i"
-  );
-
-  const match = text.match(regex);
-  if(!match) return null;
-
-  const value = Number(match[1]);
-  return Number.isFinite(value)
-    ? Math.min(10,Math.max(0,value))
-    : null;
-}
-
 function extractReviewMetadata(title, html, labels = [], fallbackCategory = ""){
   const text = cleanText(html);
   const source = `${title}\n${text}`;
