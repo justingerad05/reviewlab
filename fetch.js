@@ -193,6 +193,50 @@ function extractStructuredProsCons(html, product){
   };
 }
 
+function extractLabeledValue(html, labels = []){
+  const text = cleanText(html);
+
+  if(!text || !labels.length) return "";
+
+  const escapedLabels = labels
+    .map(label =>
+      safeString(label)
+        .replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+    )
+    .join("|");
+
+  /*
+    Stop at the next known metadata label.
+
+    This allows metadata such as:
+
+    Product Version: 4.2
+    Test Duration: 18 Days
+    Platforms: Windows, Mac, Web
+    Reviewed by: Justin Gerald
+
+    to be extracted independently even after cleanText()
+    removes the original line breaks.
+  */
+  const metadataLabels =
+    "(?:Product\\s+Version|Version|Current\\s+Version|Test\\s+Duration|Testing\\s+Duration|Tested\\s+For|Testing\\s+Period|Platforms?|Platform|Reviewed\\s+By|Reviewed\\s+by|Author|Price|Pricing|Trial|Refund)";
+
+  const regex = new RegExp(
+    `(?:${escapedLabels})\\s*[:\\-]?\\s*([\\s\\S]*?)(?=\\s+${metadataLabels}\\s*[:\\-]|$)`,
+    "i"
+  );
+
+  const match = text.match(regex);
+
+  if(!match?.[1]) return "";
+
+  return match[1]
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/[|]+$/g, "")
+    .trim();
+}
+
 /* =========================================================
    REAL REVIEW SCORE ENGINE
    ========================================================= */
