@@ -1547,10 +1547,10 @@ const reviewData = getReviewData(productInfo.slug);
 
 const reviewScore = calculateReviewScore({
   html: rawHtml,
+  productMatch: productInfo,
+  isReview,
   pros,
   cons,
-  productMatch,
-  isReview,
   reviewData
 });
 const ratingValue = reviewScore.ratingValue;
