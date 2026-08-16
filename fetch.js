@@ -266,6 +266,9 @@ function buildReviewScore({
   const reviewScore = {};
   const scoreSource = {};
 
+  const configuredScores = reviewData?.scores || {};
+  const productScores = product?.reviewScore || {};
+
   categories.forEach(([key,label])=>{
     const extracted = extractScoreFromContent(html,label);
 
