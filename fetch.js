@@ -4371,14 +4371,86 @@ and real-world monetization potential — not marketing claims.
 </div>
 <section class="homepage-authority-grid">
   ${(() => {
+    /*
+       HOMEPAGE REVIEW ROTATION
+       ------------------------
+       These authority modules are intentionally single-item widgets.
+       Showing several of the same reviews in every module makes the
+       homepage repetitive and weakens discovery of the wider review
+       inventory. Each build selects a different review for each module,
+       while preserving the module's own ranking logic.
+
+       The rotation advances every 6-hour build window (matching the
+       GitHub Actions schedule) and is deterministic for that window, so
+       the static site remains cache-friendly and reproducible.
+    */
     const reviewPosts = posts.filter(p=>p.isReview);
-    const latest = [...reviewPosts].sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,4);
-    const topRated = [...reviewPosts].filter(p=>getEffectiveReviewScore(p)>0).sort((a,b)=>getEffectiveReviewScore(b)-getEffectiveReviewScore(a)).slice(0,4);
-    const editor = rankedRecommendations[0]?.post;
-    const updated = [...reviewPosts].sort((a,b)=>new Date(b.product?.lastUpdated || b.date)-new Date(a.product?.lastUpdated || a.date)).slice(0,4);
-    const compared = [...reviewPosts].sort((a,b)=>((generatedComparisons.get(b.slug)||[]).length)-((generatedComparisons.get(a.slug)||[]).length)).slice(0,4);
-    const render = (title,items) => `<section class="homepage-authority-section"><h2>${title}</h2><ul>${items.map(p=>`<li><a href="${p.url}">${escapeHtml(p.title)}</a></li>`).join("")}</ul></section>`;
-    return render("Latest Reviews",latest) + render("Top Rated",topRated) + (editor ? `<section class="homepage-authority-section featured"><h2>Editor's Choice</h2><a href="${editor.url}">${escapeHtml(editor.title)}</a><strong>${getEffectiveReviewScore(editor) ? `${getEffectiveReviewScore(editor)}/100` : "Pending"}</strong></section>` : "") + render("Recently Updated",updated) + render("Most Compared",compared) + `<section class="homepage-authority-section"><h2>Popular Categories</h2><ul>${Object.keys(topics).map(cat=>`<li><a href="${SITE_URL}/ai-tools/${cat}/">${escapeHtml(formatCategoryTitle(cat))}</a></li>`).join("")}</ul></section>`;
+
+    const latestPool = [...reviewPosts]
+      .sort((a,b)=>new Date(b.date)-new Date(a.date));
+
+    const topRatedPool = [...reviewPosts]
+      .filter(p=>getEffectiveReviewScore(p)>0)
+      .sort((a,b)=>getEffectiveReviewScore(b)-getEffectiveReviewScore(a));
+
+    const updatedPool = [...reviewPosts]
+      .sort((a,b)=>new Date(b.product?.lastUpdated || b.date)-new Date(a.product?.lastUpdated || a.date));
+
+    const comparedPool = [...reviewPosts]
+      .sort((a,b)=>{
+        const comparisonDiff =
+          (generatedComparisons.get(b.slug)||[]).length -
+          (generatedComparisons.get(a.slug)||[]).length;
+        if(comparisonDiff) return comparisonDiff;
+        return getEffectiveReviewScore(b) - getEffectiveReviewScore(a);
+      });
+
+    const editorPool = [...rankedRecommendations]
+      .map(item=>item.post)
+      .filter(p=>p?.isReview);
+
+    const buildWindow = Math.floor(Date.now() / (6 * 60 * 60 * 1000));
+    const usedSlugs = new Set();
+
+    function pickRotating(pool, slot){
+      if(!pool.length) return null;
+
+      const start = Math.abs(buildWindow + slot) % pool.length;
+      for(let offset=0; offset<pool.length; offset++){
+        const candidate = pool[(start + offset) % pool.length];
+        if(candidate && !usedSlugs.has(candidate.slug)){
+          usedSlugs.add(candidate.slug);
+          return candidate;
+        }
+      }
+
+      // If the inventory is smaller than the number of widgets, gracefully
+      // allow a repeat rather than rendering an empty authority module.
+      return pool[start] || null;
+    }
+
+    const latest = pickRotating(latestPool,0);
+    const topRated = pickRotating(topRatedPool,1);
+    const editor = pickRotating(editorPool,2);
+    const updated = pickRotating(updatedPool,3);
+    const compared = pickRotating(comparedPool,4);
+
+    const render = (title,post,extra="") => post
+      ? `<section class="homepage-authority-section"><h2>${title}</h2><ul><li><a href="${post.url}">${escapeHtml(post.title)}</a>${extra}</li></ul></section>`
+      : `<section class="homepage-authority-section"><h2>${title}</h2><p>No reviewed items available yet.</p></section>`;
+
+    const editorMarkup = editor
+      ? `<section class="homepage-authority-section featured"><h2>Editor's Choice</h2><a href="${editor.url}">${escapeHtml(editor.title)}</a><strong>${getEffectiveReviewScore(editor) ? `${getEffectiveReviewScore(editor)}/100` : "Pending"}</strong></section>`
+      : "";
+
+    const categoryMarkup = `<section class="homepage-authority-section"><h2>Popular Categories</h2><ul>${Object.keys(topics).map(cat=>`<li><a href="${SITE_URL}/ai-tools/${cat}/">${escapeHtml(formatCategoryTitle(cat))}</a></li>`).join("")}</ul></section>`;
+
+    return render("Latest Reviews",latest) +
+      render("Top Rated",topRated) +
+      editorMarkup +
+      render("Recently Updated",updated) +
+      render("Most Compared",compared) +
+      categoryMarkup;
   })()}
 </section>
 
