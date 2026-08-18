@@ -2636,7 +2636,8 @@ function generateComparison(postA, postB) {
     return;
   }
 
-  const slug = `${postA.slug}-vs-${postB.slug}`;
+  const comparisonSlugs = [postA.slug, postB.slug].sort();
+  const slug = `${comparisonSlugs[0]}-vs-${comparisonSlugs[1]}`;
   const url = `${SITE_URL}/comparisons/${slug}/`;
 
   // Generate ItemList Schema for the Comparison
@@ -2832,8 +2833,8 @@ for(let i=0;i<posts.length;i++){
   if (posts[i].postType !== "review") continue;
   for(let j=i+1;j<posts.length && j<i+4;j++){
     if (posts[j].postType !== "review") continue;
-    const slugs = [posts[i].slug, posts[j].slug];
-    const slug = `${posts[i].slug}-vs-${posts[j].slug}`;
+    const slugs = [posts[i].slug, posts[j].slug].sort();
+    const slug = `${slugs[0]}-vs-${slugs[1]}`;
     comparisonLinks.push(`
 <li>
 <a href="${SITE_URL}/comparisons/${slug}/">
@@ -4326,7 +4327,7 @@ and real-world monetization potential — not marketing claims.
     const updated = [...reviewPosts].sort((a,b)=>new Date(b.product?.lastUpdated || b.date)-new Date(a.product?.lastUpdated || a.date)).slice(0,4);
     const compared = [...reviewPosts].sort((a,b)=>((generatedComparisons.get(b.slug)||[]).length)-((generatedComparisons.get(a.slug)||[]).length)).slice(0,4);
     const render = (title,items) => `<section class="homepage-authority-section"><h2>${title}</h2><ul>${items.map(p=>`<li><a href="${p.url}">${escapeHtml(p.title)}</a></li>`).join("")}</ul></section>`;
-    return render("Latest Reviews",latest) + render("Top Rated",topRated) + (editor ? `<section class="homepage-authority-section featured"><h2>Editor's Choice</h2><a href="${editor.url}">${escapeHtml(editor.title)}</a><strong>${getEffectiveReviewScore(editor.post) ? `${getEffectiveReviewScore(editor.post)}/100` : "Pending"}</strong></section>` : "") + render("Recently Updated",updated) + render("Most Compared",compared) + `<section class="homepage-authority-section"><h2>Popular Categories</h2><ul>${Object.keys(topics).map(cat=>`<li><a href="${SITE_URL}/ai-tools/${cat}/">${escapeHtml(formatCategoryTitle(cat))}</a></li>`).join("")}</ul></section>`;
+    return render("Latest Reviews",latest) + render("Top Rated",topRated) + (editor ? `<section class="homepage-authority-section featured"><h2>Editor's Choice</h2><a href="${editor.url}">${escapeHtml(editor.title)}</a><strong>${getEffectiveReviewScore(editor) ? `${getEffectiveReviewScore(editor)}/100` : "Pending"}</strong></section>` : "") + render("Recently Updated",updated) + render("Most Compared",compared) + `<section class="homepage-authority-section"><h2>Popular Categories</h2><ul>${Object.keys(topics).map(cat=>`<li><a href="${SITE_URL}/ai-tools/${cat}/">${escapeHtml(formatCategoryTitle(cat))}</a></li>`).join("")}</ul></section>`;
   })()}
 </section>
 
