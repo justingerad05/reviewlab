@@ -469,7 +469,9 @@ function buildReviewScore({html, product, pros, cons, isReview, reviewData = {}}
     }
 
     const configured = Number(configuredScores[key]);
-    if(Number.isFinite(configured) && configured >= 0 && configured <= 10){
+    // Treat legacy zeroes as "not configured" so they cannot suppress
+    // the canonical evidence-based score derived from the current review.
+    if(Number.isFinite(configured) && configured > 0 && configured <= 10){
       reviewScore[key] = configured;
       scoreSource[key] = "legacy-enrichment";
       return;
@@ -816,7 +818,7 @@ function generateAutomaticAlternatives(post, allPosts){
     return Number.isFinite(n) ? n : Infinity;
   };
 
-  const scoreOf = item => Number(item.post.score?.score || 0);
+  const scoreOf = item => getEffectiveReviewScore(item.post);
   const easeOf = item => Number(item.post.reviewScore?.easeOfUse || 0);
   const featureOf = item => Number(item.post.reviewScore?.features || 0);
   const premiumOf = item => {
@@ -1498,26 +1500,73 @@ function calculateReviewScore({
 function getEffectiveReviewScore(post){
   if(!post?.isReview) return 0;
 
-  const direct = Number(post.score?.score);
-  if(Number.isFinite(direct) && direct > 0){
-    return Math.min(100,Math.max(0,Math.round(direct)));
+  const directCandidates = [
+    post.score?.score,
+    post.reviewScore?.score,
+    post.product?.reviewScore?.score,
+    post.reviewData?.score
+  ];
+
+  for(const candidate of directCandidates){
+    const direct = Number(candidate);
+    if(Number.isFinite(direct) && direct > 0){
+      return Math.min(100,Math.max(0,Math.round(direct)));
+    }
   }
 
-  const dimensions = [
+  const dimensionKeys = [
     "features",
     "easeOfUse",
     "pricing",
     "support",
     "automation",
     "accuracy"
-  ]
-    .map(key => Number(post.score?.reviewScore?.[key] ?? post.reviewScore?.[key]))
-    .filter(value => Number.isFinite(value) && value >= 0 && value <= 10);
+  ];
 
-  if(!dimensions.length) return 0;
+  const sources = [
+    post.score?.reviewScore,
+    post.reviewScore,
+    post.product?.reviewScore,
+    post.reviewData?.scores,
+    post.scoreBreakdown
+  ];
+
+  const dimensions = dimensionKeys
+    .map(key => {
+      for(const source of sources){
+        const value = Number(source?.[key]);
+        if(Number.isFinite(value) && value > 0 && value <= 10){
+          return value;
+        }
+      }
+      return null;
+    })
+    .filter(value => value !== null);
+
+  if(dimensions.length){
+    return Math.min(100,Math.max(0,Math.round(
+      (dimensions.reduce((sum,value)=>sum + value,0) / dimensions.length) * 10
+    )));
+  }
+
+  // Final deterministic fallback: derive the score from the same evidence
+  // engine used when the review is first parsed. This prevents a legacy
+  // snapshot containing zeroes from producing a misleading "Pending" state.
+  const derived = deriveReviewDimensions({
+    html: post.html || "",
+    product: post.product || {},
+    pros: safeArray(post.pros),
+    cons: safeArray(post.cons)
+  });
+
+  const derivedValues = dimensionKeys
+    .map(key => Number(derived[key]))
+    .filter(value => Number.isFinite(value) && value > 0 && value <= 10);
+
+  if(!derivedValues.length) return 0;
 
   return Math.min(100,Math.max(0,Math.round(
-    (dimensions.reduce((sum,value)=>sum + value,0) / dimensions.length) * 10
+    (derivedValues.reduce((sum,value)=>sum + value,0) / derivedValues.length) * 10
   )));
 }
 
@@ -2237,8 +2286,8 @@ for(let i=0;i<reviewOnly.length;i++){
       title: `${a.product?.name || a.title} vs ${b.product?.name || b.title}`,
       products: [a.product?.slug || a.slug, b.product?.slug || b.slug],
       scores: {
-        [a.product?.slug || a.slug]: a.score?.score || 0,
-        [b.product?.slug || b.slug]: b.score?.score || 0
+        [a.product?.slug || a.slug]: getEffectiveReviewScore(a),
+        [b.product?.slug || b.slug]: getEffectiveReviewScore(b)
       },
       urls: [a.url,b.url]
     });
@@ -2865,7 +2914,9 @@ ${globalHeader()}
 `);
 
 function generateTopList(category, posts){
-  const filtered = posts.filter(p=>p.category===category);
+  const filtered = posts
+    .filter(p=>p.category===category && p.isReview)
+    .sort((a,b)=>getEffectiveReviewScore(b)-getEffectiveReviewScore(a));
   const top = filtered.slice(0,10);
   const list = top.map((p,i)=>`
 <li>
@@ -2938,7 +2989,7 @@ const reviewPool = posts.filter(
 function recommendationScore(post){
 
   const reviewScore =
-    Number(post.score?.score || 0);
+    getEffectiveReviewScore(post);
 
   const rating =
     Number(post.product?.rating || 0) * 10;
@@ -3684,8 +3735,8 @@ for (const topic in topics) {
   const topPicks =
     [...categoryPosts]
       .sort((a,b)=>
-        Number(b.score?.score || 0) -
-        Number(a.score?.score || 0)
+        getEffectiveReviewScore(b) -
+        getEffectiveReviewScore(a)
       )
       .slice(0,5);
 
@@ -4197,7 +4248,7 @@ const searchIndex = posts.map(p=>({
   entities: safeArray(p.entities),
   audience: safeArray(p.product?.audience),
   useCases: safeArray(p.product?.useCases),
-  score: p.score?.score || 0,
+  score: getEffectiveReviewScore(p),
   isReview: !!p.isReview
 }));
 
