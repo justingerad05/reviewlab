@@ -81,6 +81,15 @@ function safeArray(value){
   return [];
 }
 
+function safeNumber(value, fallback = 0){
+  const number = Number(value);
+  return Number.isFinite(number) ? number : fallback;
+}
+
+function escapeAttr(value = ""){
+  return escapeHtml(value);
+}
+
 /* =========================================================
    REVIEWLAB — PERMANENT DATA + AUTHORITY ENGINE
    ========================================================= */
@@ -356,8 +365,12 @@ function extractReviewMetadata(title, html, labels = [], fallbackCategory = ""){
     platforms,
     price,
     category,
-    trial: trialText ? !/no|none|not available|n\/a/i.test(trialText) : /\bfree trial\b|\btrial\b/i.test(text),
-    refund: refundText ? !/no|none|not available|n\/a/i.test(refundText) : /\brefund\b|\bmoney[- ]back\b/i.test(text)
+    trial: trialText
+      ? !/no|none|not available|n\/a/i.test(trialText)
+      : (/\bfree trial\b|\btrial\b/i.test(text) ? true : null),
+    refund: refundText
+      ? !/no|none|not available|n\/a/i.test(refundText)
+      : (/\brefund\b|\bmoney[- ]back\b/i.test(text) ? true : null)
   };
 }
 
@@ -806,7 +819,12 @@ function generateAutomaticAlternatives(post, allPosts){
   const scoreOf = item => Number(item.post.score?.score || 0);
   const easeOf = item => Number(item.post.reviewScore?.easeOfUse || 0);
   const featureOf = item => Number(item.post.reviewScore?.features || 0);
-  const premiumOf = item => Number(item.post.product?.price || "").replace(/[^0-9.]/g,"") || 0;
+  const premiumOf = item => {
+    const value = parseFloat(
+      String(item.post.product?.price || "").replace(/[^0-9.]/g,"")
+    );
+    return Number.isFinite(value) ? value : 0;
+  };
 
   const roles = [
     ["Best Alternative", arr => [...arr].sort((a,b)=>b.similarity-a.similarity)[0]],
@@ -1201,7 +1219,7 @@ let reviewsData = loadJson("./_data/reviews.json", []);
 let glossary = loadJson("./_data/glossary.json", []);
 let versions = loadJson("./_data/versions.json", []);
 
-const SITE_URL = site.url;
+const SITE_URL = safeString(site?.url).replace(/\/$/,"") || "https://reviewlab.pages.dev";
 
 function globalHeader(){
 return `
@@ -1225,6 +1243,27 @@ return `
 const CTA = `${SITE_URL}/og-cta-tested.jpg`;
 const DEFAULT = `${SITE_URL}/assets/og-default.jpg`;
 const LOCAL_DEFAULT_PATH = "_site/assets/og-default.jpg";
+
+/* BUILD PREFLIGHT — fail before deleting the previous successful build */
+const requiredBuildFiles = [
+  "_data/site.json",
+  "assets/styles.css",
+  "assets/og-default.jpg",
+  "assets/og-cta-tested.jpg",
+  "assets/email.js",
+  "assets/hero-bg.webp",
+  "admin/index.html"
+];
+
+const missingBuildFiles = requiredBuildFiles.filter(filePath =>
+  !fs.existsSync(filePath)
+);
+
+if(missingBuildFiles.length){
+  throw new Error(
+    `BUILD PREFLIGHT FAILED. Missing required files:\n${missingBuildFiles.join("\n")}`
+  );
+}
 
 /* CLEAN FULL BUILD */
 fs.rmSync("_site", { recursive: true, force: true });
@@ -1253,7 +1292,7 @@ const parser = new XMLParser({
 let xml = "";
 
 try {
-  const CACHE_BUSTER = `&t=${Date.now()}`;
+  const CACHE_BUSTER = `${FEED_URL.includes("?") ? "&" : "?"}t=${Date.now()}`;
   console.log("Fetching fresh feed...");
   const res = await fetch(FEED_URL + CACHE_BUSTER);
   console.log("Feed status:", res.status);
@@ -1294,8 +1333,12 @@ async function getYouTubeImages(html, slug) {
     ];
     let success = false;
     for (const imgUrl of candidates) {
-      success = await upscaleToOG(imgUrl, slug);
-      if (success) break; 
+      try {
+        success = await upscaleToOG(imgUrl, slug);
+        if (success) break;
+      } catch (error) {
+        console.warn(`⚠ OG generation failed for ${imgUrl}: ${error.message}`);
+      }
     }
 
     if (success && fs.existsSync(`_site/og-images/${slug}.webp`)) {
@@ -1309,7 +1352,12 @@ async function getYouTubeImages(html, slug) {
     const bloggerImgUrl = bloggerImgMatch[1];
     
     // Attempt to upscale the Blogger image into the same professional architecture
-    let success = await upscaleToOG(bloggerImgUrl, slug);
+    let success = false;
+    try {
+      success = await upscaleToOG(bloggerImgUrl, slug);
+    } catch (error) {
+      console.warn(`⚠ Blogger image OG generation failed: ${error.message}`);
+    }
     if (success && fs.existsSync(`_site/og-images/${slug}.webp`)) {
       return [`${SITE_URL}/og-images/${slug}.webp` ];
     }
@@ -1575,10 +1623,7 @@ function getProductData(title, content = "") {
 
     performance: product.performance || {},
     reviewScore: product.reviewScore || {},
-    avoidFor: safeArray(product.avoidFor),
-    audience: safeArray(product.audience),
-    useCases: safeArray(product.useCases),
-    strengths: safeArray(product.strengths)
+    avoidFor: safeArray(product.avoidFor)
   };
 }
 
@@ -1699,6 +1744,9 @@ const description = safeString(textOnly)
 const ogImages = await getYouTubeImages(rawHtml,slug);
 const primaryOG = ogImages[0];
 
+const publishedDate = getText(entry.published) || new Date().toISOString();
+const updatedDate = getText(entry.updated) || publishedDate;
+
 const readTime = Math.max(1,
 Math.ceil(textOnly.split(/\s+/).length / 200)
 );
@@ -1776,7 +1824,7 @@ if(isReview && !productMatch){
     cons,
     labels
   );
-  productInfo.lastUpdated = productInfo.lastUpdated || entry.published || "";
+  productInfo.lastUpdated = productInfo.lastUpdated || updatedDate || publishedDate || "";
   productInfo.category = productInfo.category || category || "ai-writing-tools";
   productInfo.slug = productInfo.slug || slug;
   productMatch = productInfo;
@@ -1793,11 +1841,11 @@ if(isReview && productMatch){
   productMatch.price = extractedMetadata.price || productMatch.price || "";
   productMatch.version = extractedMetadata.version || productMatch.version || "";
   productMatch.platforms = extractedMetadata.platforms.length ? extractedMetadata.platforms : safeArray(productMatch.platforms);
-  productMatch.trial = extractedMetadata.trial || productMatch.trial || false;
-  productMatch.refund = extractedMetadata.refund || productMatch.refund || false;
+  productMatch.trial = extractedMetadata.trial ?? productMatch.trial ?? false;
+  productMatch.refund = extractedMetadata.refund ?? productMatch.refund ?? false;
   productMatch.inferredTestDuration = extractedMetadata.testDuration || productMatch.inferredTestDuration || "";
   productMatch.reviewedBy = extractedMetadata.reviewedBy || productMatch.reviewedBy || "Justin Gerald";
-  productMatch.lastUpdated = productMatch.lastUpdated || entry.published || "";
+  productMatch.lastUpdated = productMatch.lastUpdated || updatedDate || publishedDate || "";
 }
 
 const reviewData = getReviewData(productInfo.slug);
@@ -1831,7 +1879,7 @@ const reviewRatingSchema = reviewScore.score > 0
 const productSchema = {
   "@context":"https://schema.org",
   "@type":"Product",
-  "name":escapeJson(title),
+  "name":title,
   "image":primaryOG,
   "category": productInfo.category || "",
   "offers":{
@@ -1858,10 +1906,10 @@ const productSchema = {
 const articleSchema = {
 "@context":"https://schema.org",
 "@type":"Review",
-"headline":escapeJson(title),
+"headline":title,
 "image":primaryOG,
-"datePublished":entry.published,
-"dateModified": new Date().toISOString(),
+"datePublished":publishedDate,
+"dateModified": updatedDate,
 "author":{"@type":"Person","name":"Justin Gerald","url":`${SITE_URL}/author/`},
 "publisher":{
 "@type":"Organization",
@@ -1893,7 +1941,7 @@ posts.push({
   og: primaryOG,
   thumb: primaryOG,
   readTime,
-  date: entry.published,
+  date: publishedDate,
   lastmod: new Date().toISOString(),
   category: category,
   product: productInfo,
@@ -2195,6 +2243,7 @@ function generateToC(html) {
   while ((match = regex.exec(html)) !== null) {
     const text = match[1].replace(/<[^>]+>/g, ""); // Clean any inner tags
     const id = text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    if(!text.trim()) continue;
     headings.push({ text, id });
   }
 
@@ -2262,7 +2311,7 @@ if(
 const p = post.product;
 return `
 <section class="product-summary-box">
-<h2>${p.name} Overview</h2>
+<h2>${escapeHtml(p.name)} Overview</h2>
 
 <div class="product-rating">
 ⭐ Rating: ${p.rating || "N/A"}/5
@@ -2270,15 +2319,15 @@ return `
 <div class="product-details">
 <p>
 <strong>Category:</strong>
-${p.category || "AI Tool"}
+${escapeHtml(p.category || "AI Tool")}
 </p>
 <p>
 <strong>Pricing:</strong>
-${p.price || "Check latest pricing"}
+${escapeHtml(p.price || "Check latest pricing")}
 </p>
 <p>
 <strong>Best For:</strong>
-${(p.bestFor || []).join(", ")}
+${escapeHtml((p.bestFor || []).join(", "))}
 </p>
 </div>
 <div class="product-columns">
@@ -2286,7 +2335,7 @@ ${(p.bestFor || []).join(", ")}
 <h3>✅ Pros</h3>
 <ul>
 ${(p.pros || [])
-.map(x=>`<li>${x}</li>`)
+.map(x=>`<li>${escapeHtml(x)}</li>`)
 .join("")}
 </ul>
 </div>
@@ -2294,7 +2343,7 @@ ${(p.pros || [])
 <h3>⚠ Limitations</h3>
 <ul>
 ${(p.cons || [])
-.map(x=>`<li>${x}</li>`)
+.map(x=>`<li>${escapeHtml(x)}</li>`)
 .join("")}
 </ul>
 </div>
@@ -2312,7 +2361,7 @@ const today = new Date().toISOString().split("T")[0];
 const urls = posts.map(post=>`
 <url>
 <loc>${post.url}</loc>
-<lastmod>${post.lastmod.split("T")[0]}</lastmod>
+<lastmod>${(post.lastmod || post.date || new Date().toISOString()).split("T")[0]}</lastmod>
 <changefreq>weekly</changefreq>
 <priority>0.9</priority>
 </url>`).join("");
@@ -2447,7 +2496,7 @@ ${posts.slice(0,20).map(post=>`
 <link>${post.url}</link>
 <guid>${post.url}</guid>
 <description>${escapeXML(post.description)}</description>
-<pubDate>${new Date(post.date).toUTCString()}</pubDate>
+<pubDate>${new Date(post.date || Date.now()).toUTCString()}</pubDate>
 </item>
 `).join("")}
 </channel>
@@ -3805,7 +3854,7 @@ const glossaryCards = glossary.map(item=>`
   <article class="glossary-card">
     <h2>
       <a href="${SITE_URL}/glossary/${item.slug}/">
-        ${escapeHtml(item.term)}
+        ${escapeHtml(item.name)}
       </a>
     </h2>
 
@@ -3903,8 +3952,6 @@ generatePostSitemap(posts);
 generatePageSitemap();
 generateCategorySitemap(topics);
 generateComparisonSitemap();
-generateTagSitemap();
-generateSitemapIndex();
 
 /* =========================
    TAG TAXONOMY ENGINE
@@ -3952,6 +3999,9 @@ ${list}
 </html>
 `);
 }
+
+generateTagSitemap();
+generateSitemapIndex();
 
 /* FULL AUTHORITY AUTHOR PAGE RESTORED */
 const authorPosts = posts.map(p=>`
@@ -4122,32 +4172,29 @@ const homepage = `<!doctype html>
 <link rel="canonical" href="${SITE_URL}/">
 <link rel="stylesheet" href="${SITE_URL}/assets/styles.css">
 <script type="application/ld+json">
-[
-{
-"@context":"https://schema.org",
-"@type":"WebSite",
-"name":"ReviewLab",
-"url":"${SITE_URL}",
-"potentialAction":{
-"@type":"SearchAction",
-"target":"${SITE_URL}/?q={search_term_string}",
-"query-input":"required name=search_term_string"
-}
-},
-{
-"@context":"https://schema.org",
-"@type":"ItemList",
-"itemListElement":[
-${pagePosts.map((post,i)=>`
-{
-"@type":"ListItem",
-"position":${i+1},
-"name":"${post.title}",
-"url":"${post.url}"
-}`).join(",")}
-]
-}
-]
+${JSON.stringify([
+  {
+    "@context":"https://schema.org",
+    "@type":"WebSite",
+    "name":"ReviewLab",
+    "url":SITE_URL,
+    "potentialAction":{
+      "@type":"SearchAction",
+      "target":`${SITE_URL}/?q={search_term_string}`,
+      "query-input":"required name=search_term_string"
+    }
+  },
+  {
+    "@context":"https://schema.org",
+    "@type":"ItemList",
+    "itemListElement":pagePosts.map((post,i)=>({
+      "@type":"ListItem",
+      "position":i+1,
+      "name":post.title,
+      "url":post.url
+    }))
+  }
+])}
 </script>
 </head>
 <body class="homepage-bg homepage-root">
@@ -4299,19 +4346,22 @@ results.innerHTML="";
 
 posts
 .filter(p=>{
+  const asArray = value =>
+    Array.isArray(value) ? value : (value ? [value] : []);
+
   const haystack = [
     p.title,
     p.description,
     p.category,
-    ...safeArray(p.keywords),
-    ...safeArray(p.tags),
-    ...safeArray(p.pros),
-    ...safeArray(p.cons),
-    ...safeArray(p.bestFor),
-    ...safeArray(p.features),
-    ...safeArray(p.entities),
-    ...safeArray(p.audience),
-    ...safeArray(p.useCases)
+    ...asArray(p.keywords),
+    ...asArray(p.tags),
+    ...asArray(p.pros),
+    ...asArray(p.cons),
+    ...asArray(p.bestFor),
+    ...asArray(p.features),
+    ...asArray(p.entities),
+    ...asArray(p.audience),
+    ...asArray(p.useCases)
   ]
   .join(" ")
   .toLowerCase();
@@ -4320,7 +4370,13 @@ posts
 })
 .slice(0,20)
 .forEach(p=>{
-results.innerHTML+=\`<li><a href="\${p.url}" class="post-title">\${p.title}</a></li>\`;
+  const li = document.createElement("li");
+  const link = document.createElement("a");
+  link.href = p.url;
+  link.className = "post-title";
+  link.textContent = p.title;
+  li.appendChild(link);
+  results.appendChild(li);
 });
 });
 </script>
