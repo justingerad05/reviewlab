@@ -4409,61 +4409,107 @@ and real-world monetization potential — not marketing claims.
       .map(item=>item.post)
       .filter(p=>p?.isReview);
 
+    /*
+       NATURAL HOMEPAGE SELECTION
+       --------------------------
+       The homepage is rebuilt every six hours. We use that build window as
+       a deterministic seed so the result is stable for the whole deployment,
+       but the selection is not simply "array item N" for every module.
+
+       Each module still respects its own ranking purpose, while selecting
+       from a small relevance window. A global usedSlugs set prevents the
+       same review from appearing in multiple authority modules during the
+       same build whenever enough reviews exist.
+    */
     const buildWindow = Math.floor(Date.now() / (6 * 60 * 60 * 1000));
     const usedSlugs = new Set();
 
-    function pickRotating(pool, slot){
+    function seededScore(post, salt=0){
+      const key = `${buildWindow}:${salt}:${post?.slug || post?.url || post?.title || ""}`;
+      let hash = 2166136261;
+      for(let i=0;i<key.length;i++){
+        hash ^= key.charCodeAt(i);
+        hash = Math.imul(hash,16777619);
+      }
+      return (hash >>> 0) / 4294967296;
+    }
+
+    function naturalPool(pool, limit=8){
+      return [...pool]
+        .map((post,index)=>({
+          post,
+          index,
+          // Keep the front of the ranked pool more likely, while still
+          // allowing nearby candidates to surface naturally.
+          weight: 1 / (index + 1) + seededScore(post,index) * 0.35
+        }))
+        .sort((a,b)=>b.weight-a.weight)
+        .slice(0,Math.min(limit,pool.length))
+        .map(item=>item.post);
+    }
+
+    function pickNatural(pool, salt=0){
       if(!pool.length) return null;
 
-      const start = Math.abs(buildWindow + slot) % pool.length;
-      for(let offset=0; offset<pool.length; offset++){
-        const candidate = pool[(start + offset) % pool.length];
-        if(candidate && !usedSlugs.has(candidate.slug)){
-          usedSlugs.add(candidate.slug);
-          return candidate;
-        }
+      const candidates = naturalPool(pool,Math.min(8,pool.length))
+        .filter(candidate=>candidate && !usedSlugs.has(candidate.slug));
+
+      if(candidates.length){
+        const index = Math.floor(seededScore(candidates[0],salt) * candidates.length);
+        const selected = candidates[Math.min(index,candidates.length-1)];
+        usedSlugs.add(selected.slug);
+        return selected;
       }
 
-      // If the inventory is smaller than the number of widgets, gracefully
-      // allow a repeat rather than rendering an empty authority module.
-      return pool[start] || null;
+      // Only repeat when the entire review inventory is smaller than the
+      // number of homepage authority slots.
+      return pool[0] || null;
     }
 
     /*
        DISPLAY POLICY
        ---------------
-       Latest Reviews: three reviews, rotated as a group every build window.
-       Top Rated: one rotated review.
-       Editor's Choice: one rotated recommendation.
+       Latest Reviews: three distinct reviews selected naturally from the
+       newest review inventory.
+       Top Rated: one naturally selected high-scoring review.
+       Editor's Choice: one naturally selected recommendation.
        Recently Updated: always the newest review/update, never rotated.
-       Most Compared: one rotated review.
-       Popular Categories: unchanged; render the full category list.
+       Most Compared: one naturally selected comparison leader.
+       Popular Categories: unchanged.
     */
-    const latestStart = latestPool.length
-      ? Math.abs(buildWindow) % latestPool.length
-      : 0;
 
-    const latest = latestPool.length
-      ? Array.from({length: Math.min(3, latestPool.length)}, (_, index) =>
-          latestPool[(latestStart + index) % latestPool.length]
-        )
-      : [];
-
-    latest.forEach(post => {
-      if(post?.slug) usedSlugs.add(post.slug);
-    });
-
-    const topRated = pickRotating(topRatedPool,1);
-    const editor = pickRotating(editorPool,2);
-
-    /*
-       Recently Updated is intentionally NOT a rotation pool.
-       It always shows the newest review by published/update date, so a
-       newly released review becomes visible immediately on the next build.
-    */
+    // Lock the newest item first so Recently Updated can never accidentally
+    // duplicate one of the other homepage authority modules.
     const updated = updatedPool[0] || null;
+    if(updated?.slug) usedSlugs.add(updated.slug);
 
-    const compared = pickRotating(comparedPool,4);
+    const latestCandidates = naturalPool(latestPool,Math.min(8,latestPool.length))
+      .filter(post=>post && !usedSlugs.has(post.slug));
+
+    const latest = [];
+    for(let index=0; index<latestCandidates.length && latest.length<3; index++){
+      const remaining = latestCandidates.filter(post=>!usedSlugs.has(post.slug));
+      if(!remaining.length) break;
+      const pickIndex = Math.floor(seededScore(remaining[index] || remaining[0],100+index) * remaining.length);
+      const selected = remaining[Math.min(pickIndex,remaining.length-1)];
+      if(!selected) break;
+      latest.push(selected);
+      usedSlugs.add(selected.slug);
+    }
+
+    // If the relevance window did not contain three unique reviews, expand
+    // into the full latest pool before allowing a duplicate.
+    for(const post of latestPool){
+      if(latest.length>=3) break;
+      if(post && !usedSlugs.has(post.slug)){
+        latest.push(post);
+        usedSlugs.add(post.slug);
+      }
+    }
+
+    const topRated = pickNatural(topRatedPool,1);
+    const editor = pickNatural(editorPool,2);
+    const compared = pickNatural(comparedPool,4);
 
     const renderOne = (title,post,extra="") => post
       ? `<section class="homepage-authority-section"><h2>${title}</h2><ul><li><a href="${post.url}">${escapeHtml(post.title)}</a>${extra}</li></ul></section>`
