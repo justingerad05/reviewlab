@@ -4429,27 +4429,61 @@ and real-world monetization potential — not marketing claims.
       return pool[start] || null;
     }
 
-    const latest = pickRotating(latestPool,0);
+    /*
+       DISPLAY POLICY
+       ---------------
+       Latest Reviews: three reviews, rotated as a group every build window.
+       Top Rated: one rotated review.
+       Editor's Choice: one rotated recommendation.
+       Recently Updated: always the newest review/update, never rotated.
+       Most Compared: one rotated review.
+       Popular Categories: unchanged; render the full category list.
+    */
+    const latestStart = latestPool.length
+      ? Math.abs(buildWindow) % latestPool.length
+      : 0;
+
+    const latest = latestPool.length
+      ? Array.from({length: Math.min(3, latestPool.length)}, (_, index) =>
+          latestPool[(latestStart + index) % latestPool.length]
+        )
+      : [];
+
+    latest.forEach(post => {
+      if(post?.slug) usedSlugs.add(post.slug);
+    });
+
     const topRated = pickRotating(topRatedPool,1);
     const editor = pickRotating(editorPool,2);
-    const updated = pickRotating(updatedPool,3);
+
+    /*
+       Recently Updated is intentionally NOT a rotation pool.
+       It always shows the newest review by published/update date, so a
+       newly released review becomes visible immediately on the next build.
+    */
+    const updated = updatedPool[0] || null;
+
     const compared = pickRotating(comparedPool,4);
 
-    const render = (title,post,extra="") => post
+    const renderOne = (title,post,extra="") => post
       ? `<section class="homepage-authority-section"><h2>${title}</h2><ul><li><a href="${post.url}">${escapeHtml(post.title)}</a>${extra}</li></ul></section>`
       : `<section class="homepage-authority-section"><h2>${title}</h2><p>No reviewed items available yet.</p></section>`;
 
+    const renderLatest = (items) => items.length
+      ? `<section class="homepage-authority-section"><h2>Latest Reviews</h2><ul>${items.map(post=>`<li><a href="${post.url}">${escapeHtml(post.title)}</a></li>`).join("")}</ul></section>`
+      : `<section class="homepage-authority-section"><h2>Latest Reviews</h2><p>No reviewed items available yet.</p></section>`;
+
     const editorMarkup = editor
       ? `<section class="homepage-authority-section featured"><h2>Editor's Choice</h2><a href="${editor.url}">${escapeHtml(editor.title)}</a><strong>${getEffectiveReviewScore(editor) ? `${getEffectiveReviewScore(editor)}/100` : "Pending"}</strong></section>`
-      : "";
+      : `<section class="homepage-authority-section featured"><h2>Editor's Choice</h2><p>No reviewed items available yet.</p></section>`;
 
     const categoryMarkup = `<section class="homepage-authority-section"><h2>Popular Categories</h2><ul>${Object.keys(topics).map(cat=>`<li><a href="${SITE_URL}/ai-tools/${cat}/">${escapeHtml(formatCategoryTitle(cat))}</a></li>`).join("")}</ul></section>`;
 
-    return render("Latest Reviews",latest) +
-      render("Top Rated",topRated) +
+    return renderLatest(latest) +
+      renderOne("Top Rated",topRated) +
       editorMarkup +
-      render("Recently Updated",updated) +
-      render("Most Compared",compared) +
+      renderOne("Recently Updated",updated) +
+      renderOne("Most Compared",compared) +
       categoryMarkup;
   })()}
 </section>
