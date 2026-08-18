@@ -1030,8 +1030,8 @@ function getWidgetProducts(posts){
 
     bestValue: [...reviews]
       .sort((a,b)=>
-        Number(b.score?.score || 0) -
-        Number(a.score?.score || 0)
+        getEffectiveReviewScore(b) -
+        getEffectiveReviewScore(a)
       ).slice(0,5),
 
     mostPopular: reviews.slice(0,5)
@@ -1489,6 +1489,38 @@ function calculateReviewScore({
   });
 }
 
+/*
+   CANONICAL SCORE READER
+   Never allow a stale/legacy zero score to suppress a valid review score.
+   The six review dimensions are always on a 1–10 scale, so a valid
+   dimension set can safely produce the platform's 0–100 canonical score.
+*/
+function getEffectiveReviewScore(post){
+  if(!post?.isReview) return 0;
+
+  const direct = Number(post.score?.score);
+  if(Number.isFinite(direct) && direct > 0){
+    return Math.min(100,Math.max(0,Math.round(direct)));
+  }
+
+  const dimensions = [
+    "features",
+    "easeOfUse",
+    "pricing",
+    "support",
+    "automation",
+    "accuracy"
+  ]
+    .map(key => Number(post.score?.reviewScore?.[key] ?? post.reviewScore?.[key]))
+    .filter(value => Number.isFinite(value) && value >= 0 && value <= 10);
+
+  if(!dimensions.length) return 0;
+
+  return Math.min(100,Math.max(0,Math.round(
+    (dimensions.reduce((sum,value)=>sum + value,0) / dimensions.length) * 10
+  )));
+}
+
 const seenSlugs = new Set();
 
 const posts=[];
@@ -1784,14 +1816,50 @@ const normalizedLabels = labels.map(label =>
     .trim()
 );
 
-const hasReviewLabel =
-  normalizedLabels.includes("review") ||
-  normalizedLabels.includes("main review");
+/*
+   POST-TYPE CLASSIFICATION — CANONICAL + BACKWARD COMPATIBLE
 
-const hasSupportingLabel =
-  normalizedLabels.includes("supporting") ||
-  normalizedLabels.includes("support") ||
-  normalizedLabels.includes("supporting article");
+   Blogger labels remain authoritative when they explicitly identify
+   the post type. Older posts are allowed to fall through to a strong
+   review-signal detector so legacy reviews do not remain trapped in the
+   supporting pool simply because the old Blogger label is missing or was
+   renamed (for example: "Reviews", "AI Voice Review", "Product Review").
+*/
+const normalizePostTypeLabel = label =>
+  safeLower(label)
+    .replace(/[\u2013\u2014_\-]+/g," ")
+    .replace(/\s+/g," ")
+    .trim();
+
+const normalizedPostTypeLabels = normalizedLabels.map(normalizePostTypeLabel);
+
+const hasReviewLabel = normalizedPostTypeLabels.some(label =>
+  /^(?:review|reviews|main review|product review|tool review|software review|ai tool review|ai voice review|ai writing review|ai image review|hands on review|hands-on review)$/.test(label)
+);
+
+const hasSupportingLabel = normalizedPostTypeLabels.some(label =>
+  /^(?:supporting|support|supporting article|support article|informational|guide|tutorial)$/.test(label)
+);
+
+const reviewContentText = cleanText(rawHtml).toLowerCase();
+const reviewMetadataSignals = [
+  extractedMetadata.productName,
+  extractedMetadata.website,
+  extractedMetadata.price,
+  extractedMetadata.testDuration,
+  extractedMetadata.reviewedBy
+].filter(Boolean).length;
+
+const strongReviewTitleSignal =
+  /\b(?:i\s+tested|we\s+tested|tested|hands[- ]?on|in[- ]?depth|honest|complete|ultimate)\b/.test(lowerTitle) &&
+  /\b(?:ai|tool|software|voice|writing|image|generator|platform|app)\b/.test(lowerTitle);
+
+const reviewStructureSignal =
+  /<h[2-4][^>]*>\s*(?:pros|cons|verdict|pricing|features|testing|my experience|results|rating|score)\b/i.test(rawHtml) ||
+  /\b(?:pros|cons|overall score|rating|verdict|tested for)\b/i.test(reviewContentText);
+
+const reviewScoreSignal =
+  /\b(?:features|ease of use|pricing|support|automation|accuracy)\b[^\n]{0,40}\b(?:10|[0-9])\s*(?:\/\s*10|out of 10)\b/i.test(reviewContentText);
 
 let isReview = false;
 
@@ -1801,18 +1869,17 @@ if (hasReviewLabel) {
   isReview = false;
 } else {
   /*
-    Backward-compatible fallback for older posts that do not yet
-    have an explicit post-type label.
-
-    Only strong review signals are allowed here.
-    Generic words such as "better", "results", or "working" are
-    deliberately excluded.
+    Legacy review recovery. A post must contain a strong testing/review
+    signal plus evidence that it is actually about a product/tool. This
+    avoids classifying ordinary supporting articles as reviews merely
+    because they contain the word "review".
   */
   isReview =
+    (strongReviewTitleSignal && (reviewMetadataSignals >= 1 || reviewStructureSignal || reviewScoreSignal)) ||
     lowerTitle.includes("review") ||
-    lowerTitle.includes("verdict") ||
-    lowerTitle.includes("rating");
+    lowerTitle.includes("verdict");
 }
+
 const postType = isReview ? "review" : "supporting";
 
 if(isReview && !productMatch){
@@ -2085,6 +2152,9 @@ function extractFAQEntriesFromPost(post){
       entries.push({
         question: cleanText(match[1]),
         answer,
+        category: post.category || "general",
+        postType: post.postType || (post.isReview ? "review" : "supporting"),
+        title: post.title,
         productSlug: post.product?.slug || post.slug,
         url: post.url
       });
@@ -2181,7 +2251,7 @@ const reviewRotationData = activeReviews.map(post => ({
   url: post.url,
   slug: post.slug,
   category: post.category,
-  score: Number(post.score?.score || 0)
+  score: getEffectiveReviewScore(post)
 }));
 
 const supportingRotationData = posts
@@ -2292,8 +2362,8 @@ function generateTrustBlock(post){
 
   <div class="review-score">
     <strong>Overall Score:</strong>
-    ${post.score.score}/100
-    (${post.score.ratingValue}/5)
+    ${getEffectiveReviewScore(post) || "Pending"}${getEffectiveReviewScore(post) ? "/100" : ""}
+    ${getEffectiveReviewScore(post) ? `(${(getEffectiveReviewScore(post) / 20).toFixed(1)}/5)` : ""}
   </div>
 </section>
 `;
@@ -2662,8 +2732,8 @@ ${globalHeader()}
 
       <tr class="comparison-score-row">
         <td><strong>Overall Score</strong></td>
-        <td><strong>${Number.isFinite(Number(postA.score?.score)) && Number(postA.score?.score) > 0 ? Number(postA.score.score) : Math.round((Object.values(postA.reviewScore || {}).reduce((a,b)=>a+Number(b||0),0) / Math.max(1,Object.values(postA.reviewScore || {}).length))*10)}/100</strong></td>
-        <td><strong>${Number.isFinite(Number(postB.score?.score)) && Number(postB.score?.score) > 0 ? Number(postB.score.score) : Math.round((Object.values(postB.reviewScore || {}).reduce((a,b)=>a+Number(b||0),0) / Math.max(1,Object.values(postB.reviewScore || {}).length))*10)}/100</strong></td>
+        <td><strong>${getEffectiveReviewScore(postA) || "Pending"}${getEffectiveReviewScore(postA) ? "/100" : ""}</strong></td>
+        <td><strong>${getEffectiveReviewScore(postB) || "Pending"}${getEffectiveReviewScore(postB) ? "/100" : ""}</strong></td>
       </tr>
 
       <tr>
@@ -2949,7 +3019,7 @@ const topPosts =
     .map(item=>({
       title:item.post.title,
       url:item.post.url,
-      score:item.post.score?.score || 0,
+      score:getEffectiveReviewScore(item.post),
       recommendationScore:
         Number(
           item.recommendationScore.toFixed(2)
@@ -3662,7 +3732,10 @@ for (const topic in topics) {
               </tr>`).join("")}
             <tr class="comparison-score-row">
               <td><strong>Overall Score</strong></td>
-              ${comparisonCandidates.map(p=>`<td><strong>${p.score?.score ? `${p.score.score}/100` : "Pending"}</strong></td>`).join("")}
+              ${comparisonCandidates.map(p=>{
+                const score = getEffectiveReviewScore(p);
+                return `<td><strong>${score > 0 ? `${score}/100` : "Pending"}</strong></td>`;
+              }).join("")}
             </tr>
           </tbody>
         </table>
@@ -3720,7 +3793,7 @@ ${globalHeader()}
 
         <p>
           Overall Score:
-          <strong>${p.score?.score || 0}/100</strong>
+          <strong>${getEffectiveReviewScore(p) ? `${getEffectiveReviewScore(p)}/100` : "Pending"}</strong>
         </p>
       </div>
     `).join("")}
@@ -3754,18 +3827,37 @@ ${globalHeader()}
 <section class="category-faq">
   <h2>FAQ</h2>
 
-  ${safeArray(faqData)
-    .filter(group =>
-      group.category === "general"
-    )
-    .flatMap(group=>group.questions || [])
-    .map(item=>`
-      <div>
-        <h3>${escapeHtml(item.question)}</h3>
-        <p>${escapeHtml(item.answer)}</p>
-      </div>
-    `)
-    .join("")}
+  ${(() => {
+    const categoryFaqs = safeArray(faqData)
+      .filter(item => item.category === topic && item.question && item.answer);
+
+    const postFaqs = categoryPosts
+      .flatMap(extractFAQEntriesFromPost)
+      .filter(item => item.question && item.answer);
+
+    const generalFaqs = safeArray(faqData)
+      .filter(item => item.category === "general" && item.question && item.answer);
+
+    const merged = [...categoryFaqs, ...postFaqs, ...generalFaqs];
+    const seenFaqs = new Set();
+
+    return merged
+      .filter(item => {
+        const key = `${safeLower(item.question)}|${safeLower(item.answer)}`;
+        if(seenFaqs.has(key)) return false;
+        seenFaqs.add(key);
+        return true;
+      })
+      .slice(0,8)
+      .map(item=>`
+        <div>
+          <h3>${escapeHtml(item.question)}</h3>
+          <p>${escapeHtml(item.answer)}</p>
+          ${item.url ? `<p><a href="${escapeAttr(item.url)}">Read the full review →</a></p>` : ""}
+        </div>
+      `)
+      .join("") || `<p>No category FAQ has been extracted yet. FAQs will appear automatically when a qualifying review contains question-based headings.</p>`;
+  })()}
 </section>
 
 <section>
@@ -3808,7 +3900,7 @@ window.addEventListener("load",function(){
   const pool = ${JSON.stringify(categoryPosts.filter(p=>p.isReview && p.product).map(p=>({
     title:p.title,
     url:p.url,
-    score:Number(p.score?.score || 0)
+    score:getEffectiveReviewScore(p)
   })))};
   if(!pool.length) return;
 
@@ -4229,12 +4321,12 @@ and real-world monetization potential — not marketing claims.
   ${(() => {
     const reviewPosts = posts.filter(p=>p.isReview);
     const latest = [...reviewPosts].sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,4);
-    const topRated = [...reviewPosts].filter(p=>p.score?.score).sort((a,b)=>b.score.score-a.score.score).slice(0,4);
+    const topRated = [...reviewPosts].filter(p=>getEffectiveReviewScore(p)>0).sort((a,b)=>getEffectiveReviewScore(b)-getEffectiveReviewScore(a)).slice(0,4);
     const editor = rankedRecommendations[0]?.post;
     const updated = [...reviewPosts].sort((a,b)=>new Date(b.product?.lastUpdated || b.date)-new Date(a.product?.lastUpdated || a.date)).slice(0,4);
     const compared = [...reviewPosts].sort((a,b)=>((generatedComparisons.get(b.slug)||[]).length)-((generatedComparisons.get(a.slug)||[]).length)).slice(0,4);
     const render = (title,items) => `<section class="homepage-authority-section"><h2>${title}</h2><ul>${items.map(p=>`<li><a href="${p.url}">${escapeHtml(p.title)}</a></li>`).join("")}</ul></section>`;
-    return render("Latest Reviews",latest) + render("Top Rated",topRated) + (editor ? `<section class="homepage-authority-section featured"><h2>Editor's Choice</h2><a href="${editor.url}">${escapeHtml(editor.title)}</a><strong>${editor.score?.score ? `${editor.score.score}/100` : "Pending"}</strong></section>` : "") + render("Recently Updated",updated) + render("Most Compared",compared) + `<section class="homepage-authority-section"><h2>Popular Categories</h2><ul>${Object.keys(topics).map(cat=>`<li><a href="${SITE_URL}/ai-tools/${cat}/">${escapeHtml(formatCategoryTitle(cat))}</a></li>`).join("")}</ul></section>`;
+    return render("Latest Reviews",latest) + render("Top Rated",topRated) + (editor ? `<section class="homepage-authority-section featured"><h2>Editor's Choice</h2><a href="${editor.url}">${escapeHtml(editor.title)}</a><strong>${getEffectiveReviewScore(editor.post) ? `${getEffectiveReviewScore(editor.post)}/100` : "Pending"}</strong></section>` : "") + render("Recently Updated",updated) + render("Most Compared",compared) + `<section class="homepage-authority-section"><h2>Popular Categories</h2><ul>${Object.keys(topics).map(cat=>`<li><a href="${SITE_URL}/ai-tools/${cat}/">${escapeHtml(formatCategoryTitle(cat))}</a></li>`).join("")}</ul></section>`;
   })()}
 </section>
 
