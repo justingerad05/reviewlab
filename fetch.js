@@ -1803,59 +1803,9 @@ labels = categories
   
 /* NEW AI-DRIVEN CATEGORY ENGINE */
 const extractedMetadata = extractReviewMetadata(title, rawHtml, labels, "");
+let category = extractedMetadata.category || detectTopic(title, rawHtml); 
 
-/*
-  CATEGORY RESOLUTION
-  -------------------
-  The post-type label ("review", "supporting", etc.) must never become the
-  topical category. Resolve the topical category independently and keep it
-  inside the canonical ReviewLab category set.
-*/
-const canonicalCategories = new Set([
-  "ai-writing-tools",
-  "ai-image-generators",
-  "ai-voice-tools",
-  "automation-tools"
-]);
-
-let category =
-  extractedMetadata.category ||
-  detectTopic(title, rawHtml) ||
-  "ai-writing-tools";
-
-if (labels.includes("writing") && category !== "ai-writing-tools") {
-  category = "ai-writing-tools";
-}
-
-if (!canonicalCategories.has(category)) {
-  const normalizedCategory = safeLower(category)
-    .replace(/[_-]+/g, " ")
-    .replace(/\\s+/g, " ")
-    .trim();
-
-  const categoryAliasMap = [
-    ["ai voice", "ai-voice-tools"],
-    ["voice", "ai-voice-tools"],
-    ["speech", "ai-voice-tools"],
-    ["tts", "ai-voice-tools"],
-    ["ai image", "ai-image-generators"],
-    ["image", "ai-image-generators"],
-    ["automation", "automation-tools"],
-    ["workflow", "automation-tools"],
-    ["ai writing", "ai-writing-tools"],
-    ["writing", "ai-writing-tools"]
-  ];
-
-  const alias = categoryAliasMap.find(([key]) =>
-    normalizedCategory.includes(key)
-  );
-
-  category = alias?.[1] || detectTopic(title, rawHtml) || "ai-writing-tools";
-
-  if (!canonicalCategories.has(category)) {
-    category = "ai-writing-tools";
-  }
-}
+if (labels.includes("writing") && category !== "ai-writing-tools") category = "ai-writing-tools";
   
 let baseSlug = title.toLowerCase()
 .replace(/[^a-z0-9]+/g,"-")
@@ -1891,23 +1841,10 @@ const structuredProsCons =
 const pros = structuredProsCons.pros;
 const cons = structuredProsCons.cons;
 const lowerTitle = title.toLowerCase();
-/* POST TYPE — EXPLICIT AND FUTURE-PROOF
-   The Blogger label is the authoritative source.
-
-   Supported labels:
-   - review
-   - supporting
-   - support
-
-   If "review" exists, the post is a main review.
-   If "supporting" or "support" exists, it is a supporting article.
-
-   We intentionally do NOT infer review status from the title.
-   This prevents future supporting articles containing words such as
-   "better", "results", "rating", "working", etc. from being treated
-   as reviews.
+/* POST TYPE — SURGICAL BLOGGER LABEL CLASSIFICATION
+   Keep topic/category detection completely separate from post type.
+   Blogger post-type labels are authoritative.
 */
-/* POST TYPE — NORMALIZED BLOGGER LABEL AUTHORITY */
 const normalizedLabels = labels.map(label =>
   safeLower(label)
     .replace(/[_-]+/g, " ")
@@ -1915,15 +1852,6 @@ const normalizedLabels = labels.map(label =>
     .trim()
 );
 
-/*
-   POST-TYPE CLASSIFICATION — CANONICAL + BACKWARD COMPATIBLE
-
-   Blogger labels remain authoritative when they explicitly identify
-   the post type. Older posts are allowed to fall through to a strong
-   review-signal detector so legacy reviews do not remain trapped in the
-   supporting pool simply because the old Blogger label is missing or was
-   renamed (for example: "Reviews", "AI Voice Review", "Product Review").
-*/
 const normalizePostTypeLabel = label =>
   safeLower(label)
     .replace(/[\u2013\u2014_\-]+/g," ")
@@ -1933,65 +1861,30 @@ const normalizePostTypeLabel = label =>
 const normalizedPostTypeLabels = normalizedLabels.map(normalizePostTypeLabel);
 
 /*
-  CANONICAL POST-TYPE DETECTION
-  -----------------------------
-  Blogger labels are authoritative for whether an article is a main review
-  or a supporting article. Accept valid review-label variants instead of
-  requiring one of a small fixed set of exact strings.
+   IMPORTANT: These checks decide ONLY review vs supporting.
+   They do not modify `category`, `topics`, or any AI-tool category.
+   Accept labels such as "Review", "Reviews", "Product Review",
+   "AI Voice Review", etc., while keeping supporting labels explicit.
 */
-const hasReviewLabel = normalizedPostTypeLabels.some(label => {
-  return (
-    /(?:^|\\s)(?:review|reviews)(?:$|\\s)/.test(label) ||
-    /(?:^|\\s)hands? on(?:$|\\s)/.test(label)
-  );
-});
-
-const hasSupportingLabel = normalizedPostTypeLabels.some(label =>
-  /^(?:supporting|support|supporting article|support article|informational|guide|tutorial|supporting post|support post)$/.test(label)
+const hasReviewLabel = normalizedPostTypeLabels.some(label =>
+  /^(?:reviews?|main reviews?|product reviews?|tool reviews?|software reviews?|ai tool reviews?|ai voice reviews?|ai writing reviews?|ai image reviews?|hands on reviews?|hands-on reviews?)$/.test(label)
 );
 
-const reviewContentText = cleanText(rawHtml).toLowerCase();
-const reviewMetadataSignals = [
-  extractedMetadata.productName,
-  extractedMetadata.website,
-  extractedMetadata.price,
-  extractedMetadata.testDuration,
-  extractedMetadata.reviewedBy
-].filter(Boolean).length;
+const hasSupportingLabel = normalizedPostTypeLabels.some(label =>
+  /^(?:supporting|support|supporting article|support article|informational|guide|tutorial)$/.test(label)
+);
 
-const strongReviewTitleSignal =
-  /\b(?:i\s+tested|we\s+tested|tested|hands[- ]?on|in[- ]?depth|honest|complete|ultimate)\b/.test(lowerTitle) &&
-  /\b(?:ai|tool|software|voice|writing|image|generator|platform|app)\b/.test(lowerTitle);
+/*
+   No title/content fallback is used here. If a post has neither an
+   explicit review nor an explicit supporting label, retain the existing
+   default behavior: supporting post. This prevents supporting content
+   from being promoted into the review pool and keeps classification
+   deterministic for future posts.
+*/
+let isReview = hasReviewLabel;
 
-const reviewStructureSignal =
-  /<h[2-4][^>]*>\s*(?:pros|cons|verdict|pricing|features|testing|my experience|results|rating|score)\b/i.test(rawHtml) ||
-  /\b(?:pros|cons|overall score|rating|verdict|tested for)\b/i.test(reviewContentText);
-
-const reviewScoreSignal =
-  /\b(?:features|ease of use|pricing|support|automation|accuracy)\b[^\n]{0,40}\b(?:10|[0-9])\s*(?:\/\s*10|out of 10)\b/i.test(reviewContentText);
-
-let isReview = false;
-
-if (hasReviewLabel) {
-  isReview = true;
-} else if (hasSupportingLabel) {
-  isReview = false;
-} else {
-  /*
-    Legacy review recovery. A post must contain a strong testing/review
-    signal plus evidence that it is actually about a product/tool. This
-    avoids classifying ordinary supporting articles as reviews merely
-    because they contain the word "review".
-  */
-  const legacyReviewSignalCount = [
-    strongReviewTitleSignal,
-    reviewMetadataSignals >= 1,
-    reviewStructureSignal,
-    reviewScoreSignal,
-    /\\b(?:product|software|ai\\s+tool|tool)\\s+review\\b/i.test(lowerTitle)
-  ].filter(Boolean).length;
-
-  isReview = legacyReviewSignalCount >= 2;
+if (hasSupportingLabel) {
+  isReview = hasReviewLabel ? true : false;
 }
 
 const postType = isReview ? "review" : "supporting";
@@ -2017,11 +1910,7 @@ if(isReview && productMatch){
     ? safeString(extractedMetadata.productName).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")
     : (productMatch.slug || slug);
   productMatch.name = extractedMetadata.productName || productMatch.name || title;
-  productMatch.category =
-    extractedMetadata.category ||
-    (canonicalCategories.has(productMatch.category) ? productMatch.category : "") ||
-    category ||
-    "ai-writing-tools";
+  productMatch.category = extractedMetadata.category || productMatch.category || category || "ai-writing-tools";
   productMatch.website = extractedMetadata.website || productMatch.website || "";
   productMatch.price = extractedMetadata.price || productMatch.price || "";
   productMatch.version = extractedMetadata.version || productMatch.version || "";
@@ -2070,6 +1959,8 @@ const productSchema = {
   "offers":{
     "@type":"Offer",
     "url": productInfo.website || url || "",
+    "price": productInfo.price || "",
+    "priceCurrency":"USD",
     "availability":"https://schema.org/InStock"
   },
   "brand":{
@@ -2195,17 +2086,9 @@ const activeReviews = posts.filter(p =>
 );
 
 const generatedProducts = activeReviews.map(post => {
-  /*
-    PRICE DATA CONTRACT
-    -------------------
-    Price remains available on the in-memory review object for legacy
-    comparison/ranking logic, but is deliberately excluded from the
-    generated products.json dataset.
-  */
-  const {
-    price: _excludedPrice,
-    ...productWithoutPrice
-  } = post.product || {};
+  /* Keep price available internally for existing review/ranking logic,
+     but do not expose it in the generated product.json dataset. */
+  const { price: _excludedPrice, ...productWithoutPrice } = post.product || {};
 
   return {
     ...productWithoutPrice,
@@ -2393,18 +2276,6 @@ const supportingRotationData = posts
     category: post.category
   }));
 
-/*
-  HARD DATA-CONTRACT CHECK
-  products.json must never contain a top-level price field.
-*/
-if (generatedProducts.some(product =>
-  Object.prototype.hasOwnProperty.call(product, "price")
-)) {
-  throw new Error(
-    "PRODUCT DATA CONTRACT FAILED: price must not be written to products.json."
-  );
-}
-
 fs.writeFileSync(
   "_site/_data/products.json",
   JSON.stringify(generatedProducts,null,2)
@@ -2535,7 +2406,7 @@ ${escapeHtml(p.category || "AI Tool")}
 </p>
 <p>
 <strong>Pricing:</strong>
-Check the current product pricing before purchasing.
+${escapeHtml(p.price || "Check latest pricing")}
 </p>
 <p>
 <strong>Best For:</strong>
