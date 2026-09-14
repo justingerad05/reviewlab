@@ -1803,22 +1803,59 @@ labels = categories
   
 /* NEW AI-DRIVEN CATEGORY ENGINE */
 const extractedMetadata = extractReviewMetadata(title, rawHtml, labels, "");
-const normalizedTopicLabels = labels.map(label =>
-  safeLower(label).replace(/[_-]+/g," ").replace(/\s+/g," ").trim()
-);
 
-const labelCategory =
-  normalizedTopicLabels.some(label => /\b(?:voice|speech|audio|text to speech|tts)\b/i.test(label))
-    ? "ai-voice-tools"
-    : normalizedTopicLabels.some(label => /\b(?:image|images|art|design|photo|graphics?)\b/i.test(label))
-      ? "ai-image-generators"
-      : normalizedTopicLabels.some(label => /\b(?:automation|workflow|agent|integration)\b/i.test(label))
-        ? "automation-tools"
-        : normalizedTopicLabels.some(label => /\b(?:writing|copy|content|seo)\b/i.test(label))
-          ? "ai-writing-tools"
-          : "";
+/*
+  CATEGORY RESOLUTION
+  -------------------
+  The post-type label ("review", "supporting", etc.) must never become the
+  topical category. Resolve the topical category independently and keep it
+  inside the canonical ReviewLab category set.
+*/
+const canonicalCategories = new Set([
+  "ai-writing-tools",
+  "ai-image-generators",
+  "ai-voice-tools",
+  "automation-tools"
+]);
 
-let category = labelCategory || extractedMetadata.category || detectTopic(title, rawHtml);
+let category =
+  extractedMetadata.category ||
+  detectTopic(title, rawHtml) ||
+  "ai-writing-tools";
+
+if (labels.includes("writing") && category !== "ai-writing-tools") {
+  category = "ai-writing-tools";
+}
+
+if (!canonicalCategories.has(category)) {
+  const normalizedCategory = safeLower(category)
+    .replace(/[_-]+/g, " ")
+    .replace(/\\s+/g, " ")
+    .trim();
+
+  const categoryAliasMap = [
+    ["ai voice", "ai-voice-tools"],
+    ["voice", "ai-voice-tools"],
+    ["speech", "ai-voice-tools"],
+    ["tts", "ai-voice-tools"],
+    ["ai image", "ai-image-generators"],
+    ["image", "ai-image-generators"],
+    ["automation", "automation-tools"],
+    ["workflow", "automation-tools"],
+    ["ai writing", "ai-writing-tools"],
+    ["writing", "ai-writing-tools"]
+  ];
+
+  const alias = categoryAliasMap.find(([key]) =>
+    normalizedCategory.includes(key)
+  );
+
+  category = alias?.[1] || detectTopic(title, rawHtml) || "ai-writing-tools";
+
+  if (!canonicalCategories.has(category)) {
+    category = "ai-writing-tools";
+  }
+}
   
 let baseSlug = title.toLowerCase()
 .replace(/[^a-z0-9]+/g,"-")
@@ -1896,17 +1933,21 @@ const normalizePostTypeLabel = label =>
 const normalizedPostTypeLabels = normalizedLabels.map(normalizePostTypeLabel);
 
 /*
-   Blogger review labels are authoritative. Match the word REVIEW/REVIEWS
-   anywhere in the normalized label so qualified labels such as:
-   Product Reviews, AI Tool Reviews, AI Voice Reviews, Hands-On Review,
-   and Main Reviews all enter the same ReviewLab review pipeline.
+  CANONICAL POST-TYPE DETECTION
+  -----------------------------
+  Blogger labels are authoritative for whether an article is a main review
+  or a supporting article. Accept valid review-label variants instead of
+  requiring one of a small fixed set of exact strings.
 */
-const hasReviewLabel = normalizedPostTypeLabels.some(label =>
-  /\breviews?\b/i.test(label)
-);
+const hasReviewLabel = normalizedPostTypeLabels.some(label => {
+  return (
+    /(?:^|\\s)(?:review|reviews)(?:$|\\s)/.test(label) ||
+    /(?:^|\\s)hands? on(?:$|\\s)/.test(label)
+  );
+});
 
 const hasSupportingLabel = normalizedPostTypeLabels.some(label =>
-  /^(?:supporting|support|supporting article|support article|informational|guide|tutorial)$/i.test(label)
+  /^(?:supporting|support|supporting article|support article|informational|guide|tutorial|supporting post|support post)$/.test(label)
 );
 
 const reviewContentText = cleanText(rawHtml).toLowerCase();
@@ -1942,16 +1983,15 @@ if (hasReviewLabel) {
     avoids classifying ordinary supporting articles as reviews merely
     because they contain the word "review".
   */
-  const legacyReviewEvidence =
-    reviewMetadataSignals >= 2 ||
-    (reviewMetadataSignals >= 1 && reviewStructureSignal && reviewScoreSignal) ||
-    (reviewStructureSignal && reviewScoreSignal && /\b(?:tested|hands[- ]?on|honest|my experience|verdict|rating|score)\b/i.test(reviewContentText));
+  const legacyReviewSignalCount = [
+    strongReviewTitleSignal,
+    reviewMetadataSignals >= 1,
+    reviewStructureSignal,
+    reviewScoreSignal,
+    /\\b(?:product|software|ai\\s+tool|tool)\\s+review\\b/i.test(lowerTitle)
+  ].filter(Boolean).length;
 
-  isReview =
-    legacyReviewEvidence ||
-    (strongReviewTitleSignal && (reviewMetadataSignals >= 1 || reviewStructureSignal || reviewScoreSignal)) ||
-    lowerTitle.includes("review") ||
-    lowerTitle.includes("verdict");
+  isReview = legacyReviewSignalCount >= 2;
 }
 
 const postType = isReview ? "review" : "supporting";
@@ -1977,7 +2017,11 @@ if(isReview && productMatch){
     ? safeString(extractedMetadata.productName).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")
     : (productMatch.slug || slug);
   productMatch.name = extractedMetadata.productName || productMatch.name || title;
-  productMatch.category = extractedMetadata.category || productMatch.category || category || "ai-writing-tools";
+  productMatch.category =
+    extractedMetadata.category ||
+    (canonicalCategories.has(productMatch.category) ? productMatch.category : "") ||
+    category ||
+    "ai-writing-tools";
   productMatch.website = extractedMetadata.website || productMatch.website || "";
   productMatch.price = extractedMetadata.price || productMatch.price || "";
   productMatch.version = extractedMetadata.version || productMatch.version || "";
@@ -2151,21 +2195,31 @@ const activeReviews = posts.filter(p =>
 );
 
 const generatedProducts = activeReviews.map(post => {
-  const { price: _ignoredPrice, ...productWithoutPrice } = post.product || {};
+  /*
+    PRICE DATA CONTRACT
+    -------------------
+    Price remains available on the in-memory review object for legacy
+    comparison/ranking logic, but is deliberately excluded from the
+    generated products.json dataset.
+  */
+  const {
+    price: _excludedPrice,
+    ...productWithoutPrice
+  } = post.product || {};
 
   return {
-  ...productWithoutPrice,
-  slug: post.product.slug || post.slug,
-  name: post.product.name || post.title,
-  category: post.product.category || post.category,
-  pros: safeArray(post.pros),
-  cons: safeArray(post.cons),
-  lastUpdated: post.product.lastUpdated || post.date,
-  reviewScore: post.score?.reviewScore || post.product.reviewScore || {},
-  reviewedBy: post.product.reviewedBy || "Justin Gerald",
-  testDuration: post.product.inferredTestDuration || "",
-  version: post.product.version || "",
-  platforms: safeArray(post.product.platforms)
+    ...productWithoutPrice,
+    slug: post.product.slug || post.slug,
+    name: post.product.name || post.title,
+    category: post.product.category || post.category,
+    pros: safeArray(post.pros),
+    cons: safeArray(post.cons),
+    lastUpdated: post.product.lastUpdated || post.date,
+    reviewScore: post.score?.reviewScore || post.product.reviewScore || {},
+    reviewedBy: post.product.reviewedBy || "Justin Gerald",
+    testDuration: post.product.inferredTestDuration || "",
+    version: post.product.version || "",
+    platforms: safeArray(post.product.platforms)
   };
 });
 
@@ -2339,6 +2393,18 @@ const supportingRotationData = posts
     category: post.category
   }));
 
+/*
+  HARD DATA-CONTRACT CHECK
+  products.json must never contain a top-level price field.
+*/
+if (generatedProducts.some(product =>
+  Object.prototype.hasOwnProperty.call(product, "price")
+)) {
+  throw new Error(
+    "PRODUCT DATA CONTRACT FAILED: price must not be written to products.json."
+  );
+}
+
 fs.writeFileSync(
   "_site/_data/products.json",
   JSON.stringify(generatedProducts,null,2)
@@ -2467,7 +2533,10 @@ return `
 <strong>Category:</strong>
 ${escapeHtml(p.category || "AI Tool")}
 </p>
-
+<p>
+<strong>Pricing:</strong>
+Check the current product pricing before purchasing.
+</p>
 <p>
 <strong>Best For:</strong>
 ${escapeHtml((p.bestFor || []).join(", "))}
