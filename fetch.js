@@ -1803,9 +1803,22 @@ labels = categories
   
 /* NEW AI-DRIVEN CATEGORY ENGINE */
 const extractedMetadata = extractReviewMetadata(title, rawHtml, labels, "");
-let category = extractedMetadata.category || detectTopic(title, rawHtml); 
+const normalizedTopicLabels = labels.map(label =>
+  safeLower(label).replace(/[_-]+/g," ").replace(/\s+/g," ").trim()
+);
 
-if (labels.includes("writing") && category !== "ai-writing-tools") category = "ai-writing-tools";
+const labelCategory =
+  normalizedTopicLabels.some(label => /\b(?:voice|speech|audio|text to speech|tts)\b/i.test(label))
+    ? "ai-voice-tools"
+    : normalizedTopicLabels.some(label => /\b(?:image|images|art|design|photo|graphics?)\b/i.test(label))
+      ? "ai-image-generators"
+      : normalizedTopicLabels.some(label => /\b(?:automation|workflow|agent|integration)\b/i.test(label))
+        ? "automation-tools"
+        : normalizedTopicLabels.some(label => /\b(?:writing|copy|content|seo)\b/i.test(label))
+          ? "ai-writing-tools"
+          : "";
+
+let category = labelCategory || extractedMetadata.category || detectTopic(title, rawHtml);
   
 let baseSlug = title.toLowerCase()
 .replace(/[^a-z0-9]+/g,"-")
@@ -1882,12 +1895,18 @@ const normalizePostTypeLabel = label =>
 
 const normalizedPostTypeLabels = normalizedLabels.map(normalizePostTypeLabel);
 
+/*
+   Blogger review labels are authoritative. Match the word REVIEW/REVIEWS
+   anywhere in the normalized label so qualified labels such as:
+   Product Reviews, AI Tool Reviews, AI Voice Reviews, Hands-On Review,
+   and Main Reviews all enter the same ReviewLab review pipeline.
+*/
 const hasReviewLabel = normalizedPostTypeLabels.some(label =>
   /\breviews?\b/i.test(label)
 );
 
 const hasSupportingLabel = normalizedPostTypeLabels.some(label =>
-  /^(?:supporting|support|supporting article|support article|informational|guide|tutorial)$/.test(label)
+  /^(?:supporting|support|supporting article|support article|informational|guide|tutorial)$/i.test(label)
 );
 
 const reviewContentText = cleanText(rawHtml).toLowerCase();
@@ -1923,7 +1942,13 @@ if (hasReviewLabel) {
     avoids classifying ordinary supporting articles as reviews merely
     because they contain the word "review".
   */
+  const legacyReviewEvidence =
+    reviewMetadataSignals >= 2 ||
+    (reviewMetadataSignals >= 1 && reviewStructureSignal && reviewScoreSignal) ||
+    (reviewStructureSignal && reviewScoreSignal && /\b(?:tested|hands[- ]?on|honest|my experience|verdict|rating|score)\b/i.test(reviewContentText));
+
   isReview =
+    legacyReviewEvidence ||
     (strongReviewTitleSignal && (reviewMetadataSignals >= 1 || reviewStructureSignal || reviewScoreSignal)) ||
     lowerTitle.includes("review") ||
     lowerTitle.includes("verdict");
@@ -2126,23 +2151,21 @@ const activeReviews = posts.filter(p =>
 );
 
 const generatedProducts = activeReviews.map(post => {
-  /* PRICE IS INTENTIONALLY EXCLUDED FROM products.json.
-     Keep price internally for legacy review parsing only; never export it. */
   const { price: _ignoredPrice, ...productWithoutPrice } = post.product || {};
 
   return {
-    ...productWithoutPrice,
-    slug: post.product.slug || post.slug,
-    name: post.product.name || post.title,
-    category: post.product.category || post.category,
-    pros: safeArray(post.pros),
-    cons: safeArray(post.cons),
-    lastUpdated: post.product.lastUpdated || post.date,
-    reviewScore: post.score?.reviewScore || post.product.reviewScore || {},
-    reviewedBy: post.product.reviewedBy || "Justin Gerald",
-    testDuration: post.product.inferredTestDuration || "",
-    version: post.product.version || "",
-    platforms: safeArray(post.product.platforms)
+  ...productWithoutPrice,
+  slug: post.product.slug || post.slug,
+  name: post.product.name || post.title,
+  category: post.product.category || post.category,
+  pros: safeArray(post.pros),
+  cons: safeArray(post.cons),
+  lastUpdated: post.product.lastUpdated || post.date,
+  reviewScore: post.score?.reviewScore || post.product.reviewScore || {},
+  reviewedBy: post.product.reviewedBy || "Justin Gerald",
+  testDuration: post.product.inferredTestDuration || "",
+  version: post.product.version || "",
+  platforms: safeArray(post.product.platforms)
   };
 });
 
@@ -2444,6 +2467,7 @@ return `
 <strong>Category:</strong>
 ${escapeHtml(p.category || "AI Tool")}
 </p>
+
 <p>
 <strong>Best For:</strong>
 ${escapeHtml((p.bestFor || []).join(", "))}
