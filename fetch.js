@@ -1883,7 +1883,7 @@ const normalizePostTypeLabel = label =>
 const normalizedPostTypeLabels = normalizedLabels.map(normalizePostTypeLabel);
 
 const hasReviewLabel = normalizedPostTypeLabels.some(label =>
-  /(?:^|\s)reviews?(?:$|\s)/.test(label)
+  /^(?:review|reviews|main review|product review|tool review|software review|ai tool review|ai voice review|ai writing review|ai image review|hands on review|hands-on review)$/.test(label)
 );
 
 const hasSupportingLabel = normalizedPostTypeLabels.some(label =>
@@ -1910,6 +1910,35 @@ const reviewStructureSignal =
 const reviewScoreSignal =
   /\b(?:features|ease of use|pricing|support|automation|accuracy)\b[^\n]{0,40}\b(?:10|[0-9])\s*(?:\/\s*10|out of 10)\b/i.test(reviewContentText);
 
+/*
+   CONTENT-BASED REVIEW RECOVERY — FUTURE-PROOF
+
+   A genuine review must not depend on the Blogger title containing the
+   word "review". Some valid reviews use benefit/problem-focused titles
+   while the body contains the actual review structure.
+
+   We therefore require multiple independent review markers, with product
+   evidence where appropriate. This keeps ordinary supporting articles
+   from entering the review pool merely because they mention one review-like
+   phrase.
+*/
+const reviewMarkerSignals = [
+  /\bverified(?:\s+authority)?\s+review\b/i.test(reviewContentText),
+  /\bin\s+this\s+review\b/i.test(reviewContentText),
+  /\bfinal\s+verdict\b/i.test(reviewContentText),
+  /\breview\s+timeline\b/i.test(reviewContentText),
+  /\bhow\s+we\s+tested\b/i.test(reviewContentText),
+  /\bpros\s+and\s+cons\b/i.test(reviewContentText),
+  /\bwho\s+should\s+(?:buy|use|avoid)\b/i.test(reviewContentText),
+  /\boverall\s+(?:score|rating)\b/i.test(reviewContentText),
+  /\breviewed\s+by\b/i.test(reviewContentText)
+].filter(Boolean).length;
+
+const reviewContentEvidence =
+  (reviewMarkerSignals >= 3 && reviewMetadataSignals >= 1) ||
+  (reviewMarkerSignals >= 2 && (reviewMetadataSignals >= 2 || reviewScoreSignal)) ||
+  (reviewStructureSignal && reviewScoreSignal && reviewMetadataSignals >= 1);
+
 let isReview = false;
 
 if (hasReviewLabel) {
@@ -1918,15 +1947,15 @@ if (hasReviewLabel) {
   isReview = false;
 } else {
   /*
-    Legacy review recovery. A post must contain a strong testing/review
-    signal plus evidence that it is actually about a product/tool. This
-    avoids classifying ordinary supporting articles as reviews merely
-    because they contain the word "review".
+    Legacy title-based recovery remains in place for older review posts.
+    New review recovery is content-driven so review titles do not need to
+    contain "review" or "verdict".
   */
   isReview =
     (strongReviewTitleSignal && (reviewMetadataSignals >= 1 || reviewStructureSignal || reviewScoreSignal)) ||
     lowerTitle.includes("review") ||
-    lowerTitle.includes("verdict");
+    lowerTitle.includes("verdict") ||
+    reviewContentEvidence;
 }
 
 const postType = isReview ? "review" : "supporting";
@@ -2001,6 +2030,8 @@ const productSchema = {
   "offers":{
     "@type":"Offer",
     "url": productInfo.website || url || "",
+    "price": productInfo.price || "",
+    "priceCurrency":"USD",
     "availability":"https://schema.org/InStock"
   },
   "brand":{
@@ -2441,6 +2472,10 @@ return `
 <p>
 <strong>Category:</strong>
 ${escapeHtml(p.category || "AI Tool")}
+</p>
+<p>
+<strong>Pricing:</strong>
+${escapeHtml(p.price || "Check latest pricing")}
 </p>
 <p>
 <strong>Best For:</strong>
