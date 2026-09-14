@@ -1883,7 +1883,7 @@ const normalizePostTypeLabel = label =>
 const normalizedPostTypeLabels = normalizedLabels.map(normalizePostTypeLabel);
 
 const hasReviewLabel = normalizedPostTypeLabels.some(label =>
-  /\breviews?\s*$/.test(label)
+  /(?:^|\s)reviews?(?:$|\s)/.test(label)
 );
 
 const hasSupportingLabel = normalizedPostTypeLabels.some(label =>
@@ -2314,10 +2314,7 @@ const supportingRotationData = posts
 
 fs.writeFileSync(
   "_site/_data/products.json",
-  JSON.stringify(generatedProducts, (key, value) =>
-    key === "price" ? undefined : value,
-    2
-  )
+  JSON.stringify(generatedProducts,(key,value) => key === "price" ? undefined : value,2)
 );
 
 fs.writeFileSync(
