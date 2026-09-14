@@ -1883,7 +1883,7 @@ const normalizePostTypeLabel = label =>
 const normalizedPostTypeLabels = normalizedLabels.map(normalizePostTypeLabel);
 
 const hasReviewLabel = normalizedPostTypeLabels.some(label =>
-  /^(?:review|reviews|main review|product review|tool review|software review|ai tool review|ai voice review|ai writing review|ai image review|hands on review|hands-on review)$/.test(label)
+  /\breviews?\b/i.test(label)
 );
 
 const hasSupportingLabel = normalizedPostTypeLabels.some(label =>
@@ -2001,8 +2001,6 @@ const productSchema = {
   "offers":{
     "@type":"Offer",
     "url": productInfo.website || url || "",
-    "price": productInfo.price || "",
-    "priceCurrency":"USD",
     "availability":"https://schema.org/InStock"
   },
   "brand":{
@@ -2127,20 +2125,26 @@ const activeReviews = posts.filter(p =>
   (p.product.slug || p.slug)
 );
 
-const generatedProducts = activeReviews.map(post => ({
-  ...post.product,
-  slug: post.product.slug || post.slug,
-  name: post.product.name || post.title,
-  category: post.product.category || post.category,
-  pros: safeArray(post.pros),
-  cons: safeArray(post.cons),
-  lastUpdated: post.product.lastUpdated || post.date,
-  reviewScore: post.score?.reviewScore || post.product.reviewScore || {},
-  reviewedBy: post.product.reviewedBy || "Justin Gerald",
-  testDuration: post.product.inferredTestDuration || "",
-  version: post.product.version || "",
-  platforms: safeArray(post.product.platforms)
-}));
+const generatedProducts = activeReviews.map(post => {
+  /* PRICE IS INTENTIONALLY EXCLUDED FROM products.json.
+     Keep price internally for legacy review parsing only; never export it. */
+  const { price: _ignoredPrice, ...productWithoutPrice } = post.product || {};
+
+  return {
+    ...productWithoutPrice,
+    slug: post.product.slug || post.slug,
+    name: post.product.name || post.title,
+    category: post.product.category || post.category,
+    pros: safeArray(post.pros),
+    cons: safeArray(post.cons),
+    lastUpdated: post.product.lastUpdated || post.date,
+    reviewScore: post.score?.reviewScore || post.product.reviewScore || {},
+    reviewedBy: post.product.reviewedBy || "Justin Gerald",
+    testDuration: post.product.inferredTestDuration || "",
+    version: post.product.version || "",
+    platforms: safeArray(post.product.platforms)
+  };
+});
 
 const generatedReviews = activeReviews.map(post => {
   const existing = getReviewData(post.product.slug) || {};
@@ -2439,10 +2443,6 @@ return `
 <p>
 <strong>Category:</strong>
 ${escapeHtml(p.category || "AI Tool")}
-</p>
-<p>
-<strong>Pricing:</strong>
-${escapeHtml(p.price || "Check latest pricing")}
 </p>
 <p>
 <strong>Best For:</strong>
