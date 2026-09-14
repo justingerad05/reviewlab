@@ -2001,8 +2001,6 @@ const productSchema = {
   "offers":{
     "@type":"Offer",
     "url": productInfo.website || url || "",
-    "price": productInfo.price || "",
-    "priceCurrency":"USD",
     "availability":"https://schema.org/InStock"
   },
   "brand":{
@@ -2314,7 +2312,11 @@ const supportingRotationData = posts
 
 fs.writeFileSync(
   "_site/_data/products.json",
-  JSON.stringify(generatedProducts,(key,value) => key === "price" ? undefined : value,2)
+  JSON.stringify(
+    generatedProducts,
+    (key,value) => key === "price" ? undefined : value,
+    2
+  )
 );
 
 fs.writeFileSync(
@@ -2439,10 +2441,6 @@ return `
 <p>
 <strong>Category:</strong>
 ${escapeHtml(p.category || "AI Tool")}
-</p>
-<p>
-<strong>Pricing:</strong>
-${escapeHtml(p.price || "Check latest pricing")}
 </p>
 <p>
 <strong>Best For:</strong>
