@@ -1841,10 +1841,23 @@ const structuredProsCons =
 const pros = structuredProsCons.pros;
 const cons = structuredProsCons.cons;
 const lowerTitle = title.toLowerCase();
-/* POST TYPE — SURGICAL BLOGGER LABEL CLASSIFICATION
-   Keep topic/category detection completely separate from post type.
-   Blogger post-type labels are authoritative.
+/* POST TYPE — EXPLICIT AND FUTURE-PROOF
+   The Blogger label is the authoritative source.
+
+   Supported labels:
+   - review
+   - supporting
+   - support
+
+   If "review" exists, the post is a main review.
+   If "supporting" or "support" exists, it is a supporting article.
+
+   We intentionally do NOT infer review status from the title.
+   This prevents future supporting articles containing words such as
+   "better", "results", "rating", "working", etc. from being treated
+   as reviews.
 */
+/* POST TYPE — NORMALIZED BLOGGER LABEL AUTHORITY */
 const normalizedLabels = labels.map(label =>
   safeLower(label)
     .replace(/[_-]+/g, " ")
@@ -1852,6 +1865,15 @@ const normalizedLabels = labels.map(label =>
     .trim()
 );
 
+/*
+   POST-TYPE CLASSIFICATION — CANONICAL + BACKWARD COMPATIBLE
+
+   Blogger labels remain authoritative when they explicitly identify
+   the post type. Older posts are allowed to fall through to a strong
+   review-signal detector so legacy reviews do not remain trapped in the
+   supporting pool simply because the old Blogger label is missing or was
+   renamed (for example: "Reviews", "AI Voice Review", "Product Review").
+*/
 const normalizePostTypeLabel = label =>
   safeLower(label)
     .replace(/[\u2013\u2014_\-]+/g," ")
@@ -1860,31 +1882,51 @@ const normalizePostTypeLabel = label =>
 
 const normalizedPostTypeLabels = normalizedLabels.map(normalizePostTypeLabel);
 
-/*
-   IMPORTANT: These checks decide ONLY review vs supporting.
-   They do not modify `category`, `topics`, or any AI-tool category.
-   Accept labels such as "Review", "Reviews", "Product Review",
-   "AI Voice Review", etc., while keeping supporting labels explicit.
-*/
 const hasReviewLabel = normalizedPostTypeLabels.some(label =>
-  /^(?:reviews?|main reviews?|product reviews?|tool reviews?|software reviews?|ai tool reviews?|ai voice reviews?|ai writing reviews?|ai image reviews?|hands on reviews?|hands-on reviews?)$/.test(label)
+  /\breviews?\s*$/.test(label)
 );
 
 const hasSupportingLabel = normalizedPostTypeLabels.some(label =>
   /^(?:supporting|support|supporting article|support article|informational|guide|tutorial)$/.test(label)
 );
 
-/*
-   No title/content fallback is used here. If a post has neither an
-   explicit review nor an explicit supporting label, retain the existing
-   default behavior: supporting post. This prevents supporting content
-   from being promoted into the review pool and keeps classification
-   deterministic for future posts.
-*/
-let isReview = hasReviewLabel;
+const reviewContentText = cleanText(rawHtml).toLowerCase();
+const reviewMetadataSignals = [
+  extractedMetadata.productName,
+  extractedMetadata.website,
+  extractedMetadata.price,
+  extractedMetadata.testDuration,
+  extractedMetadata.reviewedBy
+].filter(Boolean).length;
 
-if (hasSupportingLabel) {
-  isReview = hasReviewLabel ? true : false;
+const strongReviewTitleSignal =
+  /\b(?:i\s+tested|we\s+tested|tested|hands[- ]?on|in[- ]?depth|honest|complete|ultimate)\b/.test(lowerTitle) &&
+  /\b(?:ai|tool|software|voice|writing|image|generator|platform|app)\b/.test(lowerTitle);
+
+const reviewStructureSignal =
+  /<h[2-4][^>]*>\s*(?:pros|cons|verdict|pricing|features|testing|my experience|results|rating|score)\b/i.test(rawHtml) ||
+  /\b(?:pros|cons|overall score|rating|verdict|tested for)\b/i.test(reviewContentText);
+
+const reviewScoreSignal =
+  /\b(?:features|ease of use|pricing|support|automation|accuracy)\b[^\n]{0,40}\b(?:10|[0-9])\s*(?:\/\s*10|out of 10)\b/i.test(reviewContentText);
+
+let isReview = false;
+
+if (hasReviewLabel) {
+  isReview = true;
+} else if (hasSupportingLabel) {
+  isReview = false;
+} else {
+  /*
+    Legacy review recovery. A post must contain a strong testing/review
+    signal plus evidence that it is actually about a product/tool. This
+    avoids classifying ordinary supporting articles as reviews merely
+    because they contain the word "review".
+  */
+  isReview =
+    (strongReviewTitleSignal && (reviewMetadataSignals >= 1 || reviewStructureSignal || reviewScoreSignal)) ||
+    lowerTitle.includes("review") ||
+    lowerTitle.includes("verdict");
 }
 
 const postType = isReview ? "review" : "supporting";
@@ -2085,26 +2127,20 @@ const activeReviews = posts.filter(p =>
   (p.product.slug || p.slug)
 );
 
-const generatedProducts = activeReviews.map(post => {
-  /* Keep price available internally for existing review/ranking logic,
-     but do not expose it in the generated product.json dataset. */
-  const { price: _excludedPrice, ...productWithoutPrice } = post.product || {};
-
-  return {
-    ...productWithoutPrice,
-    slug: post.product.slug || post.slug,
-    name: post.product.name || post.title,
-    category: post.product.category || post.category,
-    pros: safeArray(post.pros),
-    cons: safeArray(post.cons),
-    lastUpdated: post.product.lastUpdated || post.date,
-    reviewScore: post.score?.reviewScore || post.product.reviewScore || {},
-    reviewedBy: post.product.reviewedBy || "Justin Gerald",
-    testDuration: post.product.inferredTestDuration || "",
-    version: post.product.version || "",
-    platforms: safeArray(post.product.platforms)
-  };
-});
+const generatedProducts = activeReviews.map(post => ({
+  ...post.product,
+  slug: post.product.slug || post.slug,
+  name: post.product.name || post.title,
+  category: post.product.category || post.category,
+  pros: safeArray(post.pros),
+  cons: safeArray(post.cons),
+  lastUpdated: post.product.lastUpdated || post.date,
+  reviewScore: post.score?.reviewScore || post.product.reviewScore || {},
+  reviewedBy: post.product.reviewedBy || "Justin Gerald",
+  testDuration: post.product.inferredTestDuration || "",
+  version: post.product.version || "",
+  platforms: safeArray(post.product.platforms)
+}));
 
 const generatedReviews = activeReviews.map(post => {
   const existing = getReviewData(post.product.slug) || {};
@@ -2278,7 +2314,10 @@ const supportingRotationData = posts
 
 fs.writeFileSync(
   "_site/_data/products.json",
-  JSON.stringify(generatedProducts,null,2)
+  JSON.stringify(generatedProducts, (key, value) =>
+    key === "price" ? undefined : value,
+    2
+  )
 );
 
 fs.writeFileSync(
