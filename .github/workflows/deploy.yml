@@ -1,47 +1,59 @@
 name: Build and Deploy Static Site
 
 on:
-  schedule:
-    - cron: "0 */6 * * *"
   push:
     branches:
       - main
+  schedule:
+    - cron: "0 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: reviewlab-production-deploy
+  cancel-in-progress: false
 
 jobs:
-  build:
-    permissions:
-      contents: write
+  build-and-deploy:
+    name: Fetch, Build, Validate, and Deploy
     runs-on: ubuntu-latest
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+    timeout-minutes: 30
+
     steps:
-      - name: Checkout repository
+      - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '24'
+          node-version: "24"
+          cache: npm
 
-      - name: Force Sync Dependencies
-        run: npm install --package-lock-only
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
 
-      - name: Install dependencies
-        run: npm install
-
-      - name: Fetch Blogger posts
+      - name: Fetch Blogger posts and build the static site
         run: node fetch.js
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ZONE_ID }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Validate generated site
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s _site/index.html || { echo "ERROR: _site/index.html is missing or empty."; exit 1; }
+          test -s _site/sitemap.xml || { echo "ERROR: _site/sitemap.xml is missing or empty."; exit 1; }
+          echo "Generated site validation passed."
+          echo "HTML files: $(find _site -type f -name '*.html' | wc -l)"
+          echo "Total generated files: $(find _site -type f | wc -l)"
 
       - name: Deploy to Cloudflare Pages
-        uses: cloudflare/pages-action@v1
+        uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ZONE_ID }} 
-          projectName: reviewlab
-          directory: _site
-    
-      - name: Ping Google
-        run: curl "https://www.google.com/ping?sitemap=https://reviewlab.pages.dev/sitemap.xml"
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          wranglerVersion: "4"
+          command: pages deploy _site --project-name=reviewlab --branch=main
