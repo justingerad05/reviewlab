@@ -1267,20 +1267,8 @@ if(missingBuildFiles.length){
   );
 }
 
-/* CLEAN FULL BUILD */
-fs.rmSync("_site", { recursive: true, force: true });
-fs.mkdirSync("_site", { recursive: true });
-
-// Core folders
-fs.mkdirSync("_site/posts", { recursive: true });
-fs.mkdirSync("_site/ai-tools", { recursive: true });
-fs.mkdirSync("_site/author", { recursive: true });
-fs.mkdirSync("_site/og-images", { recursive: true });
-fs.mkdirSync("_site/assets", { recursive: true });
-fs.mkdirSync("_site/_data", { recursive: true });
-fs.mkdirSync(`_site/comparisons`, {recursive:true});
-
-/* FETCH (Bypass Cache + Enhanced Error Handling) */
+/* FETCH BLOGGER FEED BEFORE TOUCHING THE LAST GOOD BUILD.
+   A network/feed failure must never erase the previous _site output. */
 const parser = new XMLParser({
   ignoreAttributes: false,
   processEntities: true,
@@ -1288,38 +1276,144 @@ const parser = new XMLParser({
   allowBooleanAttributes: true,
   parseTagValue: false,
   trimValues: false,
-  entityExpansionLimit: 50000 
+  entityExpansionLimit: 50000
 });
 
-let xml = "";
+const FETCH_TIMEOUT_MS = Math.max(
+  5000,
+  safeNumber(process.env.BLOGGER_FETCH_TIMEOUT_MS, 30000)
+);
+const MAX_FEED_PAGES = Math.max(
+  1,
+  Math.min(20, safeNumber(process.env.BLOGGER_MAX_FEED_PAGES, 10))
+);
 
-try {
-  const CACHE_BUSTER = `${FEED_URL.includes("?") ? "&" : "?"}t=${Date.now()}`;
-  console.log("Fetching fresh feed...");
-  const res = await fetch(FEED_URL + CACHE_BUSTER);
-  console.log("Feed status:", res.status);
+function getAtomNextUrl(feed) {
+  const links = safeArray(feed?.link);
+  const next = links.find(link => safeLower(link?.["@_rel"]) === "next");
+  return safeString(next?.["@_href"]).trim();
+}
 
-  if (!res.ok) {
-    throw new Error(`Blogger Feed returned status ${res.status}`);
+function normalizeFeedUrl(url) {
+  const parsed = new URL(url);
+  parsed.searchParams.set("max-results", "500");
+  parsed.searchParams.set("alt", "atom");
+  parsed.searchParams.set("_", String(Date.now()));
+  return parsed.toString();
+}
+
+async function fetchBloggerEntries() {
+  const collected = [];
+  const seenEntryIds = new Set();
+  const seenPageUrls = new Set();
+  let nextUrl = normalizeFeedUrl(FEED_URL);
+  let pageCount = 0;
+
+  while (nextUrl && pageCount < MAX_FEED_PAGES) {
+    if (seenPageUrls.has(nextUrl)) {
+      throw new Error(`Blogger feed pagination loop detected at ${nextUrl}`);
+    }
+    seenPageUrls.add(nextUrl);
+    pageCount++;
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+
+    let response;
+    let pageXml;
+    try {
+      console.log(`Fetching Blogger feed page ${pageCount}...`);
+      response = await fetch(nextUrl, {
+        method: "GET",
+        headers: {
+          "Accept": "application/atom+xml, application/xml, text/xml;q=0.9, */*;q=0.8",
+          "Cache-Control": "no-cache",
+          "Pragma": "no-cache",
+          "User-Agent": "ReviewLabStaticBuilder/1.0"
+        },
+        signal: controller.signal
+      });
+      console.log(`Blogger feed page ${pageCount} status:`, response.status);
+
+      if (!response.ok) {
+        throw new Error(`Blogger Feed returned HTTP ${response.status} ${response.statusText}`);
+      }
+
+      pageXml = await response.text();
+      if (!pageXml.trim()) {
+        throw new Error("Blogger returned an empty feed response.");
+      }
+    } catch (error) {
+      if (error?.name === "AbortError") {
+        throw new Error(`Blogger feed request timed out after ${FETCH_TIMEOUT_MS} ms.`);
+      }
+      throw error;
+    } finally {
+      clearTimeout(timeout);
+    }
+
+    let parsed;
+    try {
+      parsed = parser.parse(pageXml);
+    } catch (error) {
+      throw new Error(`Could not parse Blogger Atom XML on page ${pageCount}: ${error.message}`);
+    }
+
+    const feed = parsed?.feed;
+    if (!feed || typeof feed !== "object") {
+      const preview = pageXml.slice(0, 250).replace(/\s+/g, " ");
+      throw new Error(`Blogger response is not a valid Atom feed. Response starts: ${preview}`);
+    }
+
+    const pageEntries = safeArray(feed.entry).filter(Boolean);
+    for (const entry of pageEntries) {
+      const id = getText(entry?.id) || `${getText(entry?.title)}|${getText(entry?.published)}`;
+      if (!seenEntryIds.has(id)) {
+        seenEntryIds.add(id);
+        collected.push(entry);
+      }
+    }
+
+    nextUrl = getAtomNextUrl(feed);
   }
-  xml = await res.text();
-} catch (err) {
-  console.error("FAILED TO FETCH BLOGGER POSTS:");
-  console.error("Error Message:", err.message);
-  console.error("Stack Trace:", err.stack);
-  process.exit(1); 
+
+  if (nextUrl && pageCount >= MAX_FEED_PAGES) {
+    console.warn(`⚠ Reached BLOGGER_MAX_FEED_PAGES=${MAX_FEED_PAGES}; more feed pages may remain.`);
+  }
+
+  if (!collected.length) {
+    throw new Error("Blogger returned a valid feed but no post entries. Check feed visibility and the Blogger feed URL.");
+  }
+
+  return collected;
 }
 
-const data = parser.parse(xml);
-
-if (!data.feed || !data.feed.entry) {
-  console.error("❌ No entries found in the feed. Check if the Blogger URL is correct.");
-  process.exit(1);
+let entries;
+try {
+  entries = await fetchBloggerEntries();
+} catch (error) {
+  console.error("FAILED TO FETCH BLOGGER POSTS:", error.message);
+  console.error("The previous _site build has been preserved.");
+  process.exitCode = 1;
+  throw error;
 }
-let entries = data.feed.entry;
-if(!Array.isArray(entries)) entries=[entries];
 
-console.log("TOTAL ENTRIES FROM FEED:", entries.length);
+console.log("TOTAL UNIQUE ENTRIES FROM BLOGGER FEED:", entries.length);
+
+/* Only replace the old generated site after a valid non-empty feed is confirmed. */
+fs.rmSync("_site", { recursive: true, force: true });
+fs.mkdirSync("_site", { recursive: true });
+for (const directory of [
+  "_site/posts",
+  "_site/ai-tools",
+  "_site/author",
+  "_site/og-images",
+  "_site/assets",
+  "_site/_data",
+  "_site/comparisons"
+]) {
+  fs.mkdirSync(directory, { recursive: true });
+}
 
 /* YOUTUBE IMAGE ENGINE + BLOGGER FALLBACK (STRICT ARCHITECTURE) */
 async function getYouTubeImages(html, slug) {
