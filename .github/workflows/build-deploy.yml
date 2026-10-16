@@ -31,7 +31,7 @@ jobs:
 
       # Temporary compatibility step until package-lock.json is generated and committed.
       - name: Install dependencies
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
 
       - name: Fetch Blogger posts and build the static site
         run: node fetch.js
