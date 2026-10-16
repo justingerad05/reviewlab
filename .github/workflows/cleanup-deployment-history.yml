@@ -65,12 +65,12 @@ jobs:
           async function cfPages(url) {
             const all = [];
             for (let page = 1; ; page++) {
-              const { data } = await request(`${url}${url.includes('?') ? '&' : '?'}per_page=100&page=${page}`, cfHeaders);
+              const { data } = await request(`${url}${url.includes('?') ? '&' : '?'}per_page=25&page=${page}`, cfHeaders);
               if (!data.success) throw new Error(`Cloudflare API error: ${JSON.stringify(data.errors || [])}`);
               const rows = data.result || [];
               all.push(...rows);
               const totalPages = Number(data.result_info?.total_pages || 0);
-              if (totalPages ? page >= totalPages : rows.length < 100) break;
+              if (totalPages ? page >= totalPages : rows.length < 25) break;
             }
             return all;
           }
